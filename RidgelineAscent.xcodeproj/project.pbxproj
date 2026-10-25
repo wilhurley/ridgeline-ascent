@@ -19,6 +19,10 @@
 		AA0000000000000000000031 /* ResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000030 /* ResultsView.swift */; };
 		AA0000000000000000000033 /* RunView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000032 /* RunView.swift */; };
 		AA0000000000000000000035 /* TitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000034 /* TitleView.swift */; };
+		AA0000000000000000000050 /* HowToPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000051 /* HowToPlayView.swift */; };
+		AA0000000000000000000052 /* EquipmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000053 /* EquipmentView.swift */; };
+		AA0000000000000000000054 /* ClimberSelectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000055 /* ClimberSelectView.swift */; };
+		AA0000000000000000000056 /* RidgeArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000057 /* RidgeArt.swift */; };
 		AA0000000000000000000037 /* axe.wav in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000036 /* axe.wav */; };
 		AA0000000000000000000039 /* cairn.wav in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000038 /* cairn.wav */; };
 		AA000000000000000000003B /* charm.wav in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000003A /* charm.wav */; };
@@ -47,6 +51,10 @@
 		AA0000000000000000000030 /* ResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000032 /* RunView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000034 /* TitleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitleView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000051 /* HowToPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HowToPlayView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000053 /* EquipmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000055 /* ClimberSelectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimberSelectView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000057 /* RidgeArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RidgeArt.swift; sourceTree = "<group>"; };
 		AA0000000000000000000036 /* axe.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = axe.wav; sourceTree = "<group>"; };
 		AA0000000000000000000038 /* cairn.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = cairn.wav; sourceTree = "<group>"; };
 		AA000000000000000000003A /* charm.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = charm.wav; sourceTree = "<group>"; };
@@ -157,6 +165,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000026 /* RidgeScene.swift */,
+				AA0000000000000000000057 /* RidgeArt.swift */,
 			);
 			path = Scenes;
 			sourceTree = "<group>";
@@ -169,6 +178,9 @@
 				AA0000000000000000000030 /* ResultsView.swift */,
 				AA0000000000000000000032 /* RunView.swift */,
 				AA0000000000000000000034 /* TitleView.swift */,
+				AA0000000000000000000051 /* HowToPlayView.swift */,
+				AA0000000000000000000053 /* EquipmentView.swift */,
+				AA0000000000000000000055 /* ClimberSelectView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -270,6 +282,10 @@
 				AA0000000000000000000031 /* ResultsView.swift in Sources */,
 				AA0000000000000000000033 /* RunView.swift in Sources */,
 				AA0000000000000000000035 /* TitleView.swift in Sources */,
+				AA0000000000000000000050 /* HowToPlayView.swift in Sources */,
+				AA0000000000000000000052 /* EquipmentView.swift in Sources */,
+				AA0000000000000000000054 /* ClimberSelectView.swift in Sources */,
+				AA0000000000000000000056 /* RidgeArt.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

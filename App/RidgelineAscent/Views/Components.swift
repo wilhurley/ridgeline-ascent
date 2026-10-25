@@ -1,5 +1,15 @@
 import SwiftUI
 
+func ridgeQuantity(_ value: Double) -> String {
+    if abs(value - value.rounded()) < 0.05 {
+        return String(Int(value.rounded()))
+    }
+    let tenths = Int((value * 10).rounded())
+    let whole = tenths / 10
+    let fraction = abs(tenths % 10)
+    return "\(whole).\(fraction)"
+}
+
 struct RidgeButton: View {
     let title: String
     var subtitle: String?

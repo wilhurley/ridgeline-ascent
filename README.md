@@ -17,10 +17,23 @@ RidgelineAscent.xcodeproj      Shared scheme. Open this on a Mac. No XcodeGen.
 `RidgelineCore` does not import SpriteKit, SwiftUI, or UIKit. The app imports the package and draws whatever the simulation reports.
 
 ```
-Title -> climb -> cairn (3 charms) -> next stage -> death or summit -> results -> climb again
+First launch -> short practice ascent (skippable; replay from the title)
+Title -> climb -> cairn (3 charms) -> next stage and weather -> death or summit -> results
 ```
 
+The first launch starts a short practice ascent: drag to steer, watch the tool swing, stay above the avalanche, pick a charm, and see a tag count. Skip returns to the title and the practice does not pay Embers. It runs again only from **Practice the first ascent**.
+
 Stages are Scree Approach, Ice Shelf, and Crow's Eave, about 70 seconds each, then the Cornice Tyrant. A cairn opens every 36 seconds of climbing and pauses the ridge until a charm is chosen. The avalanche tracks a gap that shrinks over the run and closes during the boss. Hits slow the climber and do not slow the avalanche.
+
+Each stage rolls one weather from the run seed (the daily seed uses the same roll): Clear, Rain, Blizzard, or Night Storm. Rain keeps your steps sliding and strengthens Stone. Blizzard shortens the view, gusts sideways, and strengthens Frost. Night Storm hides distant rocks until lightning, and strengthens Gale. When the view is short, incoming rocks show a shadow before they appear. The name and icon show for a moment when the weather changes.
+
+Rocks come in three sizes. Pebbles are small and fast. Boulders are the middle. Slabs are slow, take several hits, and split into a boulder and a pebble when the tool breaks them.
+
+Three climbers start with different tools and pace. Sera Quinn, the guide, is free and carries an ice axe. Pell Ash, the scout, costs 30 Embers and starts with a flare. Bram Holt, the hauler, costs 50 Embers, climbs slower, and hits harder. Unlocking spends Embers already earned. Painted coats are data only: a skin cannot change speed, health, or damage, and none are for sale yet.
+
+The ridge is drawn in code. Four mountain layers and three haze bands scroll at different speeds, the sky shifts with weather and stage, and the avalanche is a churning cloud. Climbers are silhouettes with a climbing bob. `ClimberRendering` is the seam for a later sprite sheet.
+
+**How to Play** is five short cards on the title. **Equipment** (title and pause) lists climbers, the three tools with their numbers, every charm, the five tags and their 2/4 bonuses, fusions as `???` until that fusion has been in a run, the hazards, and the weather. Cairn cards show the charm name, tag, effect numbers, and what it combines with. The climb HUD shows tag progress. Pause lists the charms, bonuses, and fusions on this ascent. Results break Embers into ridge, summit, and charm yield.
 
 ## Charms
 
@@ -74,7 +87,7 @@ From the repository root, with Swift 5.9 or newer:
 swift test
 ```
 
-That builds `RidgelineCore` and runs the XCTest suite: catalog shape, set bonuses, fusions, steering, avalanche death, auto-attacks, cairns, stage and boss flow, deterministic seeds, Embers, once-per-run revive and double rewards, the banner rule, and the daily seed. SpriteKit is not involved.
+That builds `RidgelineCore` and runs the XCTest suite: catalog shape, set bonuses, fusions, steering, avalanche death, auto-attacks, cairns, stage and boss flow, deterministic seeds, Embers, once-per-run revive and double rewards, the banner rule, the daily seed, rock sizes and slab splits, weather rolls and tag boosts, climber unlocks, the field guide, and the practice beats. SpriteKit is not involved.
 
 ## Run on a Mac
 
@@ -94,11 +107,12 @@ A device build needs signing turned back on and a team selected. The Summit Pack
 
 ## What this slice does not do yet
 
-- Base Camp spending Embers
+- A camp that spends Embers on anything besides the two locked climbers
 - Enough charms for a 4-piece set inside one run
-- More fusions, stage modifiers, and a deeper boss pattern
-- Original illustrated art and scored audio (the ridge is drawn from shapes; the sounds are short tones)
+- More fusions and a deeper boss pattern
+- Sprite-sheet art and scored audio (mountains, weather, and climbers are drawn in code; the sounds are short tones)
+- Selling a cosmetic coat (the high-camp coat id is reserved and does not change the rules)
 - A real rewarded-ad SDK, StoreKit 2, or Game Center authentication
-- Daily rules beyond the shared seed and leaderboard
+- Daily rules beyond the shared seed, the weather that seed rolls, and the leaderboard
 
 Verified here: `swift test` on Linux (Swift 6.4.1). Not verified here: the `xcodebuild` command above, or a hands-on run in the iPhone 17 simulator. Those need the Mac.

@@ -76,6 +76,23 @@ public enum SimEffect: Equatable {
     case defeated(DefeatCause)
     case summitReached
     case revived
+    case hazardWarning(kind: HazardKind, x: Double, y: Double)
+    case hazardSplit(kind: HazardKind, x: Double, y: Double)
+    case weatherChanged(WeatherKind)
+    case lightningFlash
+}
+
+public struct HazardWarning: Equatable, Identifiable {
+    public let id: Int
+    public let kind: HazardKind
+    public var x: Double
+    public var y: Double
+    public var timeRemaining: Double
+    public var vx: Double
+    public var vy: Double
+    public var health: Double
+    public var radius: Double
+    public var contactDamage: Double
 }
 
 /// SpriteKit-free ascent. Call `setSteer` from a drag and `tick` from the frame loop.
@@ -97,6 +114,9 @@ public final class RidgeSimulation {
     public private(set) var elapsed: TimeInterval = 0
     public private(set) var stageElapsed: TimeInterval = 0
     public private(set) var bossElapsed: TimeInterval = 0
+    public private(set) var weather: WeatherDefinition
+    public private(set) var warnings: [HazardWarning] = []
+    public private(set) var lightningRemaining: Double = 0
 
     private var rng: SplitMix64
     private var steerTargetX: Double
@@ -109,6 +129,8 @@ public final class RidgeSimulation {
     private var timeSinceCairn = 0.0
     private var extraAvalancheSpeed: Double
     private var bossSpawned = false
+    private var lateralVelocity: Double = 0
+    private var lightningTimer: Double = 0
 
     public init(config: SimConfig = .standard, catalog: CharmCatalog = .starter) {
         self.config = config
@@ -125,6 +147,9 @@ public final class RidgeSimulation {
             alive: true
         )
         self.avalancheY = -config.startingLead
+        let openingWeather = WeatherTable.resolve(stage: .screeApproach, config: config)
+        self.weather = openingWeather
+        self.lightningTimer = openingWeather.lightningPeriod
         self.loadout = Loadout.resolve(config: config, effects: [])
         refreshLoadout(announceNew: false)
         climber.health = loadout.maxHealth
@@ -205,6 +230,39 @@ public final class RidgeSimulation {
         effects.append(.screenShake(amount: 0.35))
     }
 
+    /// A single practice rock in axe range. Used by the first-ascent tutorial.
+    public func launchPracticeTarget() {
+        let health = Rockfall.spec(.pebble, stage: stage)?.health ?? 13
+        let radius = Rockfall.spec(.pebble, stage: stage)?.radius ?? 7
+        appendHazard(
+            kind: .pebble,
+            x: climber.x,
+            y: climber.y + 56,
+            vx: 0,
+            vy: -28,
+            health: health,
+            radius: radius,
+            contactDamage: 0
+        )
+    }
+
+    /// Pauses on a fixed cairn. Unknown ids are dropped. Returns false if none remain.
+    @discardableResult
+    public func presentScriptedCairn(ids: [String]) -> Bool {
+        guard phase == .climbing || phase == .boss else { return false }
+        let offers = ids.compactMap { catalog.charm(id: $0) }
+        guard !offers.isEmpty else { return false }
+        phase = .cairn(offers: offers)
+        effects.append(.cairnReached)
+        effects.append(.screenShake(amount: 0.16))
+        return true
+    }
+
+    public func isConcealed(_ hazard: HazardState) -> Bool {
+        if lightningRemaining > 0 { return false }
+        return hazard.y - climber.y > weather.viewDistance
+    }
+
     public func drainEffects() -> [SimEffect] {
         let current = effects
         effects.removeAll(keepingCapacity: true)
@@ -267,6 +325,7 @@ public final class RidgeSimulation {
         if invulnerability > 0 { invulnerability = max(0, invulnerability - dt) }
         if hitSlowRemaining > 0 { hitSlowRemaining = max(0, hitSlowRemaining - dt) }
 
+        updateLightning(dt: dt)
         integrateClimber(dt: dt)
         integrateAvalanche(dt: dt)
         score.altitude = climber.y
@@ -282,6 +341,7 @@ public final class RidgeSimulation {
         }
 
         updateSpawns(dt: dt)
+        updateWarnings(dt: dt)
         updateHazards(dt: dt)
         resolveContacts()
         if !phase.isPlaying { return }
@@ -295,12 +355,22 @@ public final class RidgeSimulation {
     private func integrateClimber(dt: Double) {
         let slow = hitSlowRemaining > 0 ? config.hitSlowMultiplier : 1
         climber.y += loadout.climbSpeed * slow * dt
-        let dx = steerTargetX - climber.x
-        let step = config.lateralSpeed * dt
-        if abs(dx) <= step {
-            climber.x = steerTargetX
+        let gust = weather.gustAmplitude * ridgeSin(elapsed * 1.7 + 0.4)
+        if weather.steerSlip <= 0.001 {
+            let dx = steerTargetX - climber.x
+            let step = config.lateralSpeed * dt
+            if abs(dx) <= step {
+                climber.x = steerTargetX
+            } else {
+                climber.x += (dx > 0 ? step : -step)
+            }
+            climber.x += gust * dt
         } else {
-            climber.x += (dx > 0 ? step : -step)
+            let delta = steerTargetX - climber.x
+            let desiredSpeed = min(config.lateralSpeed, max(-config.lateralSpeed, delta * 6))
+            let response = (1 - weather.steerSlip) * 3.5
+            lateralVelocity += (desiredSpeed - lateralVelocity) * min(1, response * dt)
+            climber.x += (lateralVelocity + gust) * dt
         }
         let margin = 18.0
         climber.x = min(config.ridgeWidth - margin, max(margin, climber.x))
@@ -336,25 +406,55 @@ public final class RidgeSimulation {
         spawnTimer = sample.spawnInterval
         let livingAdds = hazards.filter { $0.kind != .corniceTyrant }.count
         guard livingAdds < 24 else { return }
-        guard let kind = sample.allowedKinds.randomElement(using: &rng) else { return }
+        guard let kind = pickKind(sample) else { return }
         spawnAdd(kind: kind, sample: sample)
+    }
+
+    private func pickKind(_ sample: DifficultySample) -> HazardKind? {
+        let total = sample.weights.reduce(0) { $0 + $1.weight }
+        guard total > 0 else { return nil }
+        var roll = rng.nextInt(upperBound: total)
+        for entry in sample.weights {
+            if roll < entry.weight { return entry.kind }
+            roll -= entry.weight
+        }
+        return sample.weights.last?.kind
     }
 
     private func spawnAdd(kind: HazardKind, sample: DifficultySample) {
         let margin = 22.0
         let x = margin + rng.nextUnit() * (config.ridgeWidth - margin * 2)
         switch kind {
-        case .fallingRock:
-            appendHazard(
+        case .pebble, .boulder, .slab:
+            guard let spec = Rockfall.spec(kind, stage: stage) else { return }
+            let payload = HazardWarning(
+                id: nextHazardID,
                 kind: kind,
                 x: x,
                 y: climber.y + config.spawnAhead,
+                timeRemaining: weather.warningLead,
                 vx: 0,
-                vy: -sample.hazardSpeed,
-                health: sample.hazardHealth,
-                radius: 13,
-                contactDamage: sample.contactDamage
+                vy: -sample.hazardSpeed * spec.speedMultiplier,
+                health: spec.health,
+                radius: spec.radius,
+                contactDamage: sample.contactDamage * spec.contactMultiplier
             )
+            if weather.telegraphsRocks {
+                nextHazardID += 1
+                warnings.append(payload)
+                effects.append(.hazardWarning(kind: kind, x: payload.x, y: payload.y))
+            } else {
+                appendHazard(
+                    kind: kind,
+                    x: payload.x,
+                    y: payload.y,
+                    vx: payload.vx,
+                    vy: payload.vy,
+                    health: payload.health,
+                    radius: payload.radius,
+                    contactDamage: payload.contactDamage
+                )
+            }
         case .iceWraith:
             appendHazard(
                 kind: kind,
@@ -425,6 +525,44 @@ public final class RidgeSimulation {
             contactDamage: contactDamage,
             contactCooldown: 0
         ))
+    }
+
+    private func updateWarnings(dt: Double) {
+        guard !warnings.isEmpty else { return }
+        for index in warnings.indices {
+            warnings[index].timeRemaining -= dt
+        }
+        let ready = warnings.filter { $0.timeRemaining <= 0 }
+        warnings.removeAll { $0.timeRemaining <= 0 }
+        for warning in ready {
+            appendHazard(
+                kind: warning.kind,
+                x: warning.x,
+                y: warning.y,
+                vx: warning.vx,
+                vy: warning.vy,
+                health: warning.health,
+                radius: warning.radius,
+                contactDamage: warning.contactDamage
+            )
+        }
+    }
+
+    private func updateLightning(dt: Double) {
+        guard weather.lightningPeriod > 0 else {
+            lightningRemaining = 0
+            return
+        }
+        if lightningRemaining > 0 {
+            lightningRemaining = max(0, lightningRemaining - dt)
+            return
+        }
+        lightningTimer -= dt
+        if lightningTimer <= 0 {
+            lightningRemaining = weather.lightningDuration
+            lightningTimer = weather.lightningPeriod
+            effects.append(.lightningFlash)
+        }
     }
 
     private func updateHazards(dt: Double) {
@@ -517,7 +655,8 @@ public final class RidgeSimulation {
                 removeIDs.insert(killed.id)
                 score.hazardsDefeated += 1
                 effects.append(.hazardDefeated(kind: killed.kind, x: killed.x, y: killed.y))
-                effects.append(.screenShake(amount: killed.kind == .corniceTyrant ? 0.85 : 0.2))
+                effects.append(.screenShake(amount: killed.kind == .corniceTyrant ? 0.85 : killed.kind == .slab ? 0.45 : 0.2))
+                spawnFragments(of: killed)
                 if killed.kind == .corniceTyrant {
                     defeatedBoss = true
                 }
@@ -533,6 +672,26 @@ public final class RidgeSimulation {
             phase = .summit
             effects.append(.summitReached)
         }
+    }
+
+    private func spawnFragments(of killed: HazardState) {
+        guard let spec = Rockfall.spec(killed.kind, stage: stage), !spec.splitsInto.isEmpty else { return }
+        let signs: [Double] = [-1, 1]
+        for (index, child) in spec.splitsInto.enumerated() {
+            guard let childSpec = Rockfall.spec(child, stage: stage) else { continue }
+            let sign = signs[index % signs.count]
+            appendHazard(
+                kind: child,
+                x: min(config.ridgeWidth - 20, max(20, killed.x + sign * killed.radius * 0.45)),
+                y: killed.y + 12,
+                vx: sign * 80,
+                vy: -36 - Double(index) * 16,
+                health: childSpec.health,
+                radius: childSpec.radius,
+                contactDamage: max(6, killed.contactDamage * (child == .pebble ? 0.45 : 0.75))
+            )
+        }
+        effects.append(.hazardSplit(kind: killed.kind, x: killed.x, y: killed.y))
     }
 
     private func defeat(_ cause: DefeatCause) {
@@ -554,6 +713,7 @@ public final class RidgeSimulation {
             bossElapsed = 0
             hazards.removeAll { $0.kind != .corniceTyrant }
             effects.append(.stageAdvanced(.theCornice))
+            adoptWeather(for: .theCornice)
             if !bossSpawned {
                 spawnBoss()
             }
@@ -561,7 +721,24 @@ public final class RidgeSimulation {
             stage = next
             effects.append(.stageAdvanced(next))
             effects.append(.screenShake(amount: 0.22))
+            adoptWeather(for: next)
         }
+    }
+
+    private func adoptWeather(for stage: StageID) {
+        let next = WeatherTable.resolve(stage: stage, config: config)
+        weather = next
+        lightningRemaining = 0
+        lightningTimer = next.lightningPeriod
+        let previousMax = loadout.maxHealth
+        refreshLoadout(announceNew: false)
+        climber.maxHealth = loadout.maxHealth
+        if climber.health > loadout.maxHealth {
+            climber.health = loadout.maxHealth
+        } else if loadout.maxHealth > previousMax {
+            climber.health += loadout.maxHealth - previousMax
+        }
+        effects.append(.weatherChanged(next.kind))
     }
 
     private func updateCairnClock(dt: Double) {
@@ -582,7 +759,7 @@ public final class RidgeSimulation {
         let previousFusions = Set(activeFusions.map(\.id))
         var collected: [CharmEffect] = []
         for charm in ownedCharms {
-            collected.append(contentsOf: charm.effects)
+            collected.append(contentsOf: scaled(charm.effects, tag: charm.tag))
         }
         let counts = Dictionary(grouping: ownedCharms, by: \.tag).mapValues(\.count)
         let bonuses = catalog.setBonuses
@@ -592,14 +769,18 @@ public final class RidgeSimulation {
                 return lhs.threshold < rhs.threshold
             }
         for bonus in bonuses {
-            collected.append(contentsOf: bonus.effects)
+            collected.append(contentsOf: scaled(bonus.effects, tag: bonus.tag))
         }
         let ownedIDs = Set(ownedCharms.map(\.id))
         let fusions = catalog.fusions
             .filter { $0.isUnlocked(owned: ownedIDs) }
             .sorted { $0.id < $1.id }
         for fusion in fusions {
-            collected.append(contentsOf: fusion.effects)
+            let boost = fusion.requires.compactMap { id -> Double? in
+                guard let tag = catalog.charm(id: id)?.tag else { return nil }
+                return weather.tagBoosts[tag]
+            }.max() ?? 0
+            collected.append(contentsOf: fusion.effects.map { WeatherTable.scaled($0, multiplier: 1 + boost) })
         }
         activeSetBonuses = bonuses
         activeFusions = fusions
@@ -607,6 +788,11 @@ public final class RidgeSimulation {
         if announceNew {
             announceNewModifiers(previousBonuses: previousBonuses, previousFusions: previousFusions)
         }
+    }
+
+    private func scaled(_ effects: [CharmEffect], tag: ElementTag) -> [CharmEffect] {
+        let multiplier = 1 + (weather.tagBoosts[tag] ?? 0)
+        return effects.map { WeatherTable.scaled($0, multiplier: multiplier) }
     }
 
     private func announceNewModifiers(previousBonuses: Set<String>, previousFusions: Set<String>) {
@@ -622,13 +808,6 @@ public final class RidgeSimulation {
         let dx = hazard.x - climber.x
         let dy = hazard.y - climber.y
         return (dx * dx + dy * dy).squareRoot()
-    }
-}
-
-private extension Array where Element == HazardKind {
-    func randomElement(using rng: inout SplitMix64) -> HazardKind? {
-        guard !isEmpty else { return nil }
-        return self[rng.nextInt(upperBound: count)]
     }
 }
 

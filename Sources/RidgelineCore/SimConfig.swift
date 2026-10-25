@@ -27,6 +27,10 @@ public struct SimConfig: Equatable {
     public var spawnsEnabled: Bool
     public var extraAvalancheSpeed: Double
     public var leadTrackGain: Double
+    public var bonusArmor: Double
+    public var bonusBurn: Double
+    public var climberID: String
+    public var forcedWeather: WeatherKind?
 
     public init(
         seed: UInt64 = 1,
@@ -52,7 +56,11 @@ public struct SimConfig: Equatable {
         hitSlowMultiplier: Double = 0.45,
         spawnsEnabled: Bool = true,
         extraAvalancheSpeed: Double = 0,
-        leadTrackGain: Double = 1.15
+        leadTrackGain: Double = 1.15,
+        bonusArmor: Double = 0,
+        bonusBurn: Double = 0,
+        climberID: String = ClimberRoster.guide.id,
+        forcedWeather: WeatherKind? = nil
     ) {
         self.seed = seed
         self.ridgeWidth = ridgeWidth
@@ -78,6 +86,10 @@ public struct SimConfig: Equatable {
         self.spawnsEnabled = spawnsEnabled
         self.extraAvalancheSpeed = extraAvalancheSpeed
         self.leadTrackGain = leadTrackGain
+        self.bonusArmor = bonusArmor
+        self.bonusBurn = bonusBurn
+        self.climberID = climberID
+        self.forcedWeather = forcedWeather
     }
 
     public static var standard: SimConfig { SimConfig() }

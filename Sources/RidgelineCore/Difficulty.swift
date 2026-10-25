@@ -23,20 +23,43 @@ public enum StageID: Int, Equatable, Codable, CaseIterable, Identifiable {
 }
 
 public enum HazardKind: String, Equatable, Codable, CaseIterable, Identifiable {
-    case fallingRock
+    case pebble
+    case boulder
+    case slab
     case iceWraith
     case stormCrow
     case corniceTyrant
 
     public var id: String { rawValue }
 
+    public var isRock: Bool {
+        switch self {
+        case .pebble, .boulder, .slab:
+            return true
+        case .iceWraith, .stormCrow, .corniceTyrant:
+            return false
+        }
+    }
+
     public var displayName: String {
         switch self {
-        case .fallingRock: return "Falling Rock"
+        case .pebble: return "Pebble"
+        case .boulder: return "Boulder"
+        case .slab: return "Slab"
         case .iceWraith: return "Ice Wraith"
         case .stormCrow: return "Storm Crow"
         case .corniceTyrant: return "Cornice Tyrant"
         }
+    }
+}
+
+public struct SpawnWeight: Equatable {
+    public var kind: HazardKind
+    public var weight: Int
+
+    public init(kind: HazardKind, weight: Int) {
+        self.kind = kind
+        self.weight = weight
     }
 }
 
@@ -46,7 +69,11 @@ public struct DifficultySample: Equatable {
     public var hazardHealth: Double
     public var contactDamage: Double
     public var avalancheBonus: Double
-    public var allowedKinds: [HazardKind]
+    public var weights: [SpawnWeight]
+
+    public var allowedKinds: [HazardKind] {
+        weights.map(\.kind)
+    }
 }
 
 public enum DifficultyCurve {
@@ -57,20 +84,38 @@ public enum DifficultyCurve {
         let index = Double(stage.rawValue)
         let stageRamp = min(max(timeInStage, 0), 80)
         let spawnInterval: Double
-        let kinds: [HazardKind]
+        let weights: [SpawnWeight]
         switch stage {
         case .screeApproach:
             spawnInterval = max(0.55, 1.28 - stageRamp * 0.006)
-            kinds = [.fallingRock]
+            weights = [
+                SpawnWeight(kind: .pebble, weight: 5),
+                SpawnWeight(kind: .boulder, weight: 2)
+            ]
         case .iceShelf:
             spawnInterval = max(0.48, 1.05 - stageRamp * 0.005)
-            kinds = [.fallingRock, .iceWraith]
+            weights = [
+                SpawnWeight(kind: .pebble, weight: 3),
+                SpawnWeight(kind: .boulder, weight: 3),
+                SpawnWeight(kind: .slab, weight: 2),
+                SpawnWeight(kind: .iceWraith, weight: 3)
+            ]
         case .crowsEave:
             spawnInterval = max(0.40, 0.92 - stageRamp * 0.004)
-            kinds = [.fallingRock, .iceWraith, .stormCrow]
+            weights = [
+                SpawnWeight(kind: .pebble, weight: 2),
+                SpawnWeight(kind: .boulder, weight: 3),
+                SpawnWeight(kind: .slab, weight: 2),
+                SpawnWeight(kind: .iceWraith, weight: 2),
+                SpawnWeight(kind: .stormCrow, weight: 3)
+            ]
         case .theCornice:
             spawnInterval = max(0.90, 1.45 - stageRamp * 0.003)
-            kinds = [.fallingRock, .stormCrow]
+            weights = [
+                SpawnWeight(kind: .pebble, weight: 3),
+                SpawnWeight(kind: .boulder, weight: 1),
+                SpawnWeight(kind: .stormCrow, weight: 2)
+            ]
         }
         return DifficultySample(
             spawnInterval: spawnInterval,
@@ -78,7 +123,7 @@ public enum DifficultyCurve {
             hazardHealth: 18 + 8 * (index - 1),
             contactDamage: 12 + 4 * (index - 1),
             avalancheBonus: 5 * (index - 1) + 0.015 * max(0, climbTime),
-            allowedKinds: kinds
+            weights: weights
         )
     }
 }

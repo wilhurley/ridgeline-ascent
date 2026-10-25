@@ -18,13 +18,20 @@ struct ResultsView: View {
                     }
                     if let summary = app.summary {
                         VStack(spacing: 8) {
+                            row("Distance", "\(Int(summary.score.altitude.rounded(.down))) m")
                             row("Stage", summary.stageName)
-                            row("Altitude", "\(Int(summary.score.altitude.rounded(.down))) m")
-                            row("Hazards", "\(summary.score.hazardsDefeated)")
+                            row("Hazards destroyed", "\(summary.score.hazardsDefeated)")
+                            row("Charms taken", "\(summary.charmNames.count)")
                             row("Cairns", "\(summary.score.cairnsClaimed)")
                             row("Stages cleared", "\(summary.score.stagesCleared)")
                             row("Score", "\(summary.score.points)")
-                            row("Embers earned", "\(app.embersGranted)")
+                            row("From the ridge", "\(summary.emberBreakdown.fromRidge)")
+                            row("Summit bonus", "\(summary.emberBreakdown.summitBonus)")
+                            row("Charm yield", "\(summary.emberBreakdown.charmYield)")
+                            row("Embers earned", "\(summary.emberBreakdown.total)")
+                            if app.doubledThisRun {
+                                row("After the flare", "\(app.embersGranted)")
+                            }
                             row("Embers carried", "\(app.embersBalance)")
                         }
                         .padding(14)

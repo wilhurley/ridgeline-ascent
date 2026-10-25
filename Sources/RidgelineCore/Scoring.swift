@@ -39,6 +39,27 @@ public struct RunScore: Equatable {
         let scaled = Double(embers) * (1 + max(0, yieldFraction))
         return Int(scaled.rounded(.down))
     }
+
+    public var ridgeEmbers: Int { points / 250 }
+
+    public var summitBonus: Int { summitReached ? 20 : 0 }
+
+    public func emberBreakdown(yieldFraction: Double) -> EmberBreakdown {
+        let total = earnedEmbers(yieldFraction: yieldFraction)
+        return EmberBreakdown(
+            fromRidge: ridgeEmbers,
+            summitBonus: summitBonus,
+            charmYield: total - ridgeEmbers - summitBonus,
+            total: total
+        )
+    }
+}
+
+public struct EmberBreakdown: Equatable {
+    public let fromRidge: Int
+    public let summitBonus: Int
+    public let charmYield: Int
+    public let total: Int
 }
 
 public enum RunEnd: Equatable {
@@ -65,6 +86,8 @@ public struct RunSummary: Equatable {
     public let daily: Bool
     public let elapsed: TimeInterval
     public let stageName: String
+    public let emberBreakdown: EmberBreakdown
+    public let charmIDs: [String]
 
     public init(
         score: RunScore,
@@ -75,7 +98,9 @@ public struct RunSummary: Equatable {
         setBonusNames: [String],
         daily: Bool,
         elapsed: TimeInterval,
-        stageName: String
+        stageName: String,
+        emberBreakdown: EmberBreakdown,
+        charmIDs: [String]
     ) {
         self.score = score
         self.embersEarned = embersEarned
@@ -86,5 +111,7 @@ public struct RunSummary: Equatable {
         self.daily = daily
         self.elapsed = elapsed
         self.stageName = stageName
+        self.emberBreakdown = emberBreakdown
+        self.charmIDs = charmIDs
     }
 }

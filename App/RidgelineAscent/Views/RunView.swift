@@ -16,7 +16,13 @@ struct RunView: View {
             }
             VStack(spacing: 8) {
                 hud
+                if let weather = app.weatherCallout {
+                    weatherCallout(weather)
+                }
                 Spacer()
+                if let prompt = app.tutorialPrompt, !app.showCairn, !app.showDefeat {
+                    tutorialBanner(prompt)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -27,6 +33,9 @@ struct RunView: View {
             }
             if app.showDefeat {
                 DefeatCard()
+            }
+            if app.isPaused, !app.showCairn, !app.showDefeat {
+                PauseOverlay()
             }
             if let toast = app.toast {
                 VStack {
@@ -64,13 +73,39 @@ struct RunView: View {
                         .foregroundStyle(RidgePalette.muted)
                 }
             }
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 ForEach(0..<max(app.hud.charmCount, 1), id: \.self) { index in
                     Circle()
                         .fill(index < app.hud.charmCount ? RidgePalette.gold : Color.white.opacity(0.15))
                         .frame(width: 7, height: 7)
                 }
                 Spacer()
+                Button {
+                    app.togglePause()
+                } label: {
+                        Image(systemName: "pause.fill")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(RidgePalette.ink)
+                            .frame(width: 36, height: 28)
+                            .background(Color.white.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Pause")
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(app.tagProgress) { progress in
+                        let goal = progress.nextThreshold ?? max(progress.count, 2)
+                        Text("\(progress.tag.displayName) \(progress.count)/\(goal)")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(progress.count > 0 ? progress.tag.tint : RidgePalette.muted)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.white.opacity(progress.count > 0 ? 0.08 : 0.03))
+                            .clipShape(Capsule())
+                    }
+                }
             }
             MeterBar(title: "Hold", fraction: app.hud.healthFraction, tint: RidgePalette.ice)
             MeterBar(
@@ -83,6 +118,104 @@ struct RunView: View {
         .background(Color.black.opacity(0.38))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .foregroundStyle(RidgePalette.ink)
+    }
+
+    private func weatherCallout(_ weather: WeatherDefinition) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: weather.kind.symbolName)
+                .foregroundStyle(RidgePalette.gold)
+            Text(weather.name)
+                .font(.system(size: 15, weight: .semibold, design: .serif))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.black.opacity(0.45))
+        .clipShape(Capsule())
+        .frame(maxWidth: .infinity)
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func tutorialBanner(_ prompt: String) -> some View {
+        HStack(spacing: 12) {
+            Text(prompt)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(RidgePalette.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button("Skip") {
+                app.skipTutorial()
+            }
+            .font(.system(size: 14, weight: .bold, design: .rounded))
+            .foregroundStyle(RidgePalette.night)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(RidgePalette.gold)
+            .clipShape(Capsule())
+        }
+        .padding(12)
+        .background(Color.black.opacity(0.55))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.bottom, 12)
+    }
+}
+
+struct PauseOverlay: View {
+    @EnvironmentObject private var app: AppModel
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.72).ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Paused")
+                        .font(.system(size: 28, weight: .bold, design: .serif))
+                    if let weather = app.scene?.simulation.weather {
+                        Label(weather.name, systemImage: weather.kind.symbolName)
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundStyle(RidgePalette.gold)
+                    }
+                    labeledList("Charms", empty: "No charms yet.", lines: app.runCharms.map { "\($0.name) · \($0.tag.displayName)" })
+                    labeledList("Bonuses", empty: "No set bonus yet.", lines: app.runBonuses.map(\.name))
+                    labeledList("Fusions", empty: "No fusion yet.", lines: app.runFusions.map(\.name))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Tags")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(RidgePalette.muted)
+                        ForEach(app.tagProgress.filter { $0.count > 0 }) { progress in
+                            let goal = progress.nextThreshold.map(String.init) ?? "set"
+                            Text("\(progress.tag.displayName) \(progress.count) · next \(goal)")
+                                .foregroundStyle(progress.tag.tint)
+                        }
+                    }
+                    RidgeButton(title: "Resume") {
+                        app.togglePause()
+                    }
+                    RidgeButton(title: "Equipment", filled: false) {
+                        app.showEquipment = true
+                    }
+                }
+                .padding(22)
+            }
+        }
+        .foregroundStyle(RidgePalette.ink)
+    }
+
+    private func labeledList(_ title: String, empty: String, lines: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(RidgePalette.muted)
+            if lines.isEmpty {
+                Text(empty)
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(RidgePalette.muted)
+            } else {
+                ForEach(lines, id: \.self) { line in
+                    Text(line)
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                }
+            }
+        }
     }
 }
 

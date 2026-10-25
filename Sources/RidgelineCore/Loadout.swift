@@ -42,7 +42,8 @@ public struct Loadout: Equatable {
         var armor = 0.0
         var emberYield = 0.0
         var healOnCairn = 0.0
-        var burn = 0.0
+        var burn = config.bonusBurn
+        armor += config.bonusArmor
 
         for effect in effects {
             switch effect {

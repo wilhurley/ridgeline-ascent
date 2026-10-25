@@ -7,8 +7,8 @@ final class DifficultyTests: XCTestCase {
         let late = DifficultyCurve.sample(stage: .crowsEave, timeInStage: 40, climbTime: 160)
         XCTAssertLessThan(late.spawnInterval, early.spawnInterval)
         XCTAssertGreaterThan(late.avalancheBonus, early.avalancheBonus)
-        XCTAssertEqual(early.allowedKinds, [.fallingRock])
-        XCTAssertEqual(late.allowedKinds, [.fallingRock, .iceWraith, .stormCrow])
+        XCTAssertEqual(early.allowedKinds, [.pebble, .boulder])
+        XCTAssertEqual(late.allowedKinds, [.pebble, .boulder, .slab, .iceWraith, .stormCrow])
         let boss = DifficultyCurve.sample(stage: .theCornice, timeInStage: 0, climbTime: 200)
         XCTAssertFalse(boss.allowedKinds.contains(.corniceTyrant))
         XCTAssertTrue(boss.allowedKinds.contains(.stormCrow))
@@ -62,7 +62,7 @@ final class SimulationTests: XCTestCase {
         let sim = makeSim { $0.spawnsEnabled = false }
         sim.testingSetHealth(8)
         _ = sim.testingSpawnHazard(
-            kind: .fallingRock,
+            kind: .boulder,
             x: sim.climber.x,
             y: sim.climber.y,
             health: 40,
@@ -81,7 +81,7 @@ final class SimulationTests: XCTestCase {
         warded.testingSetHealth(100)
         for sim in [naked, warded] {
             _ = sim.testingSpawnHazard(
-                kind: .fallingRock,
+                kind: .boulder,
                 x: sim.climber.x,
                 y: sim.climber.y,
                 health: 80,
@@ -95,7 +95,7 @@ final class SimulationTests: XCTestCase {
     func testAutoAttackDamagesAndCanDefeatAHazard() {
         let sim = makeSim { $0.spawnsEnabled = false }
         let id = sim.testingSpawnHazard(
-            kind: .fallingRock,
+            kind: .boulder,
             x: sim.climber.x,
             y: sim.climber.y + 50,
             health: 30
@@ -313,7 +313,7 @@ final class SimulationTests: XCTestCase {
         }
         sim.tick(dt: 6)
         XCTAssertFalse(sim.hazards.isEmpty)
-        XCTAssertTrue(sim.hazards.allSatisfy { $0.kind == .fallingRock })
+        XCTAssertTrue(sim.hazards.allSatisfy { $0.kind == .pebble || $0.kind == .boulder })
     }
 }
 
@@ -532,9 +532,10 @@ final class DailyRunTests: XCTestCase {
     }
 }
 
-private func makeSim(_ tweak: (inout SimConfig) -> Void = { _ in }) -> RidgeSimulation {
+func makeSim(_ tweak: (inout SimConfig) -> Void = { _ in }) -> RidgeSimulation {
     var config = SimConfig.standard
     config.spawnsEnabled = false
+    config.forcedWeather = .clear
     tweak(&config)
     return RidgeSimulation(config: config)
 }

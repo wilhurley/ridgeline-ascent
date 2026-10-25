@@ -35,5 +35,19 @@ struct RootView: View {
             SummitPackSheet()
                 .environmentObject(app)
         }
+        .sheet(isPresented: $app.showHowToPlay) {
+            HowToPlayView()
+        }
+        .sheet(isPresented: $app.showEquipment) {
+            EquipmentView()
+                .environmentObject(app)
+        }
+        .sheet(isPresented: $app.showClimbers) {
+            ClimberSelectView()
+                .environmentObject(app)
+        }
+        .onAppear {
+            app.onLaunch()
+        }
     }
 }

@@ -56,7 +56,8 @@ public final class RunSession {
         case .climbing, .cairn, .boss:
             return nil
         }
-        let earned = simulation.score.earnedEmbers(yieldFraction: simulation.loadout.emberYield)
+        let yield = simulation.loadout.emberYield
+        let earned = simulation.score.earnedEmbers(yieldFraction: yield)
         baseEmbers = earned
         embersGranted = earned
         wallet.credit(earned)
@@ -69,7 +70,9 @@ public final class RunSession {
             setBonusNames: simulation.activeSetBonuses.map(\.name),
             daily: daily,
             elapsed: simulation.elapsed,
-            stageName: simulation.stage.displayName
+            stageName: simulation.stage.displayName,
+            emberBreakdown: simulation.score.emberBreakdown(yieldFraction: yield),
+            charmIDs: simulation.ownedCharms.map(\.id)
         )
         summary = settled
         let board: LeaderboardID = daily ? .dailyAscent : .bestAltitude

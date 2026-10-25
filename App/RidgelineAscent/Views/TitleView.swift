@@ -6,68 +6,83 @@ struct TitleView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 12)
-            MountainMark()
-                .frame(height: 150)
-                .padding(.bottom, 8)
-            Text("RIDGELINE")
-                .font(.system(size: 40, weight: .bold, design: .serif))
-                .tracking(3)
-                .foregroundStyle(RidgePalette.ink)
-            Text("ASCENT")
-                .font(.system(size: 28, weight: .semibold, design: .serif))
-                .tracking(8)
-                .foregroundStyle(RidgePalette.ember)
-                .padding(.bottom, 8)
-            Text("Stay ahead of the avalanche.")
-                .font(.system(size: 15, weight: .medium, design: .rounded))
-                .foregroundStyle(RidgePalette.muted)
-                .padding(.bottom, 28)
+            ScrollView {
+                VStack(spacing: 0) {
+                    MountainMark()
+                        .frame(height: 120)
+                        .padding(.top, 12)
+                        .padding(.bottom, 8)
+                    Text("RIDGELINE")
+                        .font(.system(size: 40, weight: .bold, design: .serif))
+                        .tracking(3)
+                        .foregroundStyle(RidgePalette.ink)
+                    Text("ASCENT")
+                        .font(.system(size: 28, weight: .semibold, design: .serif))
+                        .tracking(8)
+                        .foregroundStyle(RidgePalette.ember)
+                        .padding(.bottom, 8)
+                    Text("Stay ahead of the avalanche.")
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                        .foregroundStyle(RidgePalette.muted)
+                        .padding(.bottom, 22)
 
-            VStack(spacing: 12) {
-                RidgeButton(title: "Begin Ascent", subtitle: "A fresh storm") {
-                    app.start(daily: false)
-                }
-                RidgeButton(title: "Daily Ascent", subtitle: "Same ridge for everyone today", filled: false) {
-                    app.start(daily: true)
-                }
-            }
-            .padding(.horizontal, 28)
-
-            HStack(spacing: 18) {
-                stat("Embers", "\(app.embersBalance)")
-                stat("Best", "\(app.bestAltitude) m")
-                stat("Daily", "\(app.bestDaily) m")
-            }
-            .padding(.top, 22)
-
-            if !app.ownsSummitPack {
-                Button {
-                    app.showSummitPack = true
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("\(SummitPack.displayName)  \(SummitPack.displayPrice)")
-                                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                            Text(SummitPack.summary)
-                                .font(.system(size: 12, weight: .regular, design: .rounded))
-                                .foregroundStyle(RidgePalette.muted)
-                                .multilineTextAlignment(.leading)
+                    VStack(spacing: 12) {
+                        RidgeButton(title: "Begin Ascent", subtitle: app.selectedProfile.name) {
+                            app.start(daily: false)
                         }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .foregroundStyle(RidgePalette.gold)
+                        RidgeButton(title: "Daily Ascent", subtitle: "Same ridge for everyone today", filled: false) {
+                            app.start(daily: true)
+                        }
+                        RidgeButton(title: "Climbers", subtitle: "Unlock with Embers", filled: false) {
+                            app.showClimbers = true
+                        }
+                        RidgeButton(title: "How to Play", filled: false) {
+                            app.showHowToPlay = true
+                        }
+                        RidgeButton(title: "Equipment", subtitle: "Gear, charms, weather", filled: false) {
+                            app.showEquipment = true
+                        }
+                        RidgeButton(title: "Practice the first ascent", filled: false) {
+                            app.startTutorial()
+                        }
                     }
-                    .padding(14)
-                    .background(Color.white.opacity(0.05))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 28)
-                .padding(.top, 18)
-            }
+                    .padding(.horizontal, 28)
 
-            Spacer()
+                    HStack(spacing: 18) {
+                        stat("Embers", "\(app.embersBalance)")
+                        stat("Best", "\(app.bestAltitude) m")
+                        stat("Daily", "\(app.bestDaily) m")
+                    }
+                    .padding(.top, 22)
+
+                    if !app.ownsSummitPack {
+                        Button {
+                            app.showSummitPack = true
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("\(SummitPack.displayName)  \(SummitPack.displayPrice)")
+                                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                    Text(SummitPack.summary)
+                                        .font(.system(size: 12, weight: .regular, design: .rounded))
+                                        .foregroundStyle(RidgePalette.muted)
+                                        .multilineTextAlignment(.leading)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundStyle(RidgePalette.gold)
+                            }
+                            .padding(14)
+                            .background(Color.white.opacity(0.05))
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 28)
+                        .padding(.top, 18)
+                        .padding(.bottom, 24)
+                    }
+                }
+            }
             if app.showsBanner {
                 BannerSlotView()
                     .padding(.horizontal, 20)

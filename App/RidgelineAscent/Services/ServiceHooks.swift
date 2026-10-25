@@ -7,6 +7,9 @@ enum StorageKey {
     static let summitPack = "ridgeline.summitPack.owned"
     static let bestAltitude = "ridgeline.bestAltitude"
     static let bestDaily = "ridgeline.bestDaily"
+    static let tutorialSeen = "ridgeline.tutorialSeen"
+    static let locker = "ridgeline.locker"
+    static let discovery = "ridgeline.discovery"
 }
 
 /// Drop-in point for a rewarded-ad SDK.
@@ -90,6 +93,7 @@ enum HapticCue {
     case hurt
     case revive
     case summit
+    case warning
 }
 
 final class HapticHook {
@@ -97,7 +101,7 @@ final class HapticHook {
         switch cue {
         case .hurt:
             UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
-        case .cairn, .charm:
+        case .cairn, .charm, .warning:
             UIImpactFeedbackGenerator(style: .soft).impactOccurred()
         case .revive, .summit:
             UINotificationFeedbackGenerator().notificationOccurred(.success)
