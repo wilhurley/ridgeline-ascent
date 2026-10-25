@@ -1,0 +1,450 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA0000000000000000000013 /* RidgelineCore in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000012 /* RidgelineCore */; };
+		AA0000000000000000000021 /* SoundBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000020 /* SoundBoard.swift */; };
+		AA0000000000000000000023 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000022 /* AppModel.swift */; };
+		AA0000000000000000000025 /* RidgelineAscentApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000024 /* RidgelineAscentApp.swift */; };
+		AA0000000000000000000027 /* RidgeScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000026 /* RidgeScene.swift */; };
+		AA0000000000000000000029 /* ServiceHooks.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000028 /* ServiceHooks.swift */; };
+		AA000000000000000000002B /* RidgePalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000002A /* RidgePalette.swift */; };
+		AA000000000000000000002D /* CairnChoiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000002C /* CairnChoiceView.swift */; };
+		AA000000000000000000002F /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000002E /* Components.swift */; };
+		AA0000000000000000000031 /* ResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000030 /* ResultsView.swift */; };
+		AA0000000000000000000033 /* RunView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000032 /* RunView.swift */; };
+		AA0000000000000000000035 /* TitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000034 /* TitleView.swift */; };
+		AA0000000000000000000037 /* axe.wav in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000036 /* axe.wav */; };
+		AA0000000000000000000039 /* cairn.wav in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000038 /* cairn.wav */; };
+		AA000000000000000000003B /* charm.wav in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000003A /* charm.wav */; };
+		AA000000000000000000003D /* death.wav in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000003C /* death.wav */; };
+		AA000000000000000000003F /* flare.wav in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000003E /* flare.wav */; };
+		AA0000000000000000000041 /* hit.wav in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000040 /* hit.wav */; };
+		AA0000000000000000000043 /* hook.wav in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000042 /* hook.wav */; };
+		AA0000000000000000000045 /* hurt.wav in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000044 /* hurt.wav */; };
+		AA0000000000000000000047 /* summit.wav in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000046 /* summit.wav */; };
+		AA0000000000000000000049 /* ui.wav in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000048 /* ui.wav */; };
+		AA000000000000000000004B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000004A /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AA0000000000000000000007 /* RidgelineAscent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RidgelineAscent.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA000000000000000000004C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA000000000000000000004A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA0000000000000000000020 /* SoundBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundBoard.swift; sourceTree = "<group>"; };
+		AA0000000000000000000022 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		AA0000000000000000000024 /* RidgelineAscentApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RidgelineAscentApp.swift; sourceTree = "<group>"; };
+		AA0000000000000000000026 /* RidgeScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RidgeScene.swift; sourceTree = "<group>"; };
+		AA0000000000000000000028 /* ServiceHooks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceHooks.swift; sourceTree = "<group>"; };
+		AA000000000000000000002A /* RidgePalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RidgePalette.swift; sourceTree = "<group>"; };
+		AA000000000000000000002C /* CairnChoiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CairnChoiceView.swift; sourceTree = "<group>"; };
+		AA000000000000000000002E /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		AA0000000000000000000030 /* ResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000032 /* RunView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000034 /* TitleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitleView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000036 /* axe.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = axe.wav; sourceTree = "<group>"; };
+		AA0000000000000000000038 /* cairn.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = cairn.wav; sourceTree = "<group>"; };
+		AA000000000000000000003A /* charm.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = charm.wav; sourceTree = "<group>"; };
+		AA000000000000000000003C /* death.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = death.wav; sourceTree = "<group>"; };
+		AA000000000000000000003E /* flare.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = flare.wav; sourceTree = "<group>"; };
+		AA0000000000000000000040 /* hit.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = hit.wav; sourceTree = "<group>"; };
+		AA0000000000000000000042 /* hook.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = hook.wav; sourceTree = "<group>"; };
+		AA0000000000000000000044 /* hurt.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = hurt.wav; sourceTree = "<group>"; };
+		AA0000000000000000000046 /* summit.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = summit.wav; sourceTree = "<group>"; };
+		AA0000000000000000000048 /* ui.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ui.wav; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA0000000000000000000009 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0000000000000000000013 /* RidgelineCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA0000000000000000000003 = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000005 /* App */,
+				AA0000000000000000000004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000007 /* RidgelineAscent.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000005 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000006 /* RidgelineAscent */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000006 /* RidgelineAscent */ = {
+			isa = PBXGroup;
+			children = (
+				AA000000000000000000004C /* Info.plist */,
+				AA000000000000000000004A /* Assets.xcassets */,
+				AA0000000000000000000024 /* RidgelineAscentApp.swift */,
+				AA0000000000000000000014 /* Theme */,
+				AA0000000000000000000015 /* Model */,
+				AA0000000000000000000016 /* Services */,
+				AA0000000000000000000017 /* Audio */,
+				AA0000000000000000000018 /* Scenes */,
+				AA0000000000000000000019 /* Views */,
+			);
+			path = RidgelineAscent;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000014 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				AA000000000000000000002A /* RidgePalette.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000015 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000022 /* AppModel.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000016 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000028 /* ServiceHooks.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000017 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000020 /* SoundBoard.swift */,
+				AA0000000000000000000036 /* axe.wav */,
+				AA0000000000000000000038 /* cairn.wav */,
+				AA000000000000000000003A /* charm.wav */,
+				AA000000000000000000003C /* death.wav */,
+				AA000000000000000000003E /* flare.wav */,
+				AA0000000000000000000040 /* hit.wav */,
+				AA0000000000000000000042 /* hook.wav */,
+				AA0000000000000000000044 /* hurt.wav */,
+				AA0000000000000000000046 /* summit.wav */,
+				AA0000000000000000000048 /* ui.wav */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000018 /* Scenes */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000026 /* RidgeScene.swift */,
+			);
+			path = Scenes;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000019 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				AA000000000000000000002C /* CairnChoiceView.swift */,
+				AA000000000000000000002E /* Components.swift */,
+				AA0000000000000000000030 /* ResultsView.swift */,
+				AA0000000000000000000032 /* RunView.swift */,
+				AA0000000000000000000034 /* TitleView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA0000000000000000000001 /* RidgelineAscent */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA000000000000000000000C /* Build configuration list for PBXNativeTarget "RidgelineAscent" */;
+			buildPhases = (
+				AA0000000000000000000008 /* Sources */,
+				AA0000000000000000000009 /* Frameworks */,
+				AA000000000000000000000A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RidgelineAscent;
+			packageProductDependencies = (
+				AA0000000000000000000012 /* RidgelineCore */,
+			);
+			productName = RidgelineAscent;
+			productReference = AA0000000000000000000007 /* RidgelineAscent.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA0000000000000000000002 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				ORGANIZATIONNAME = "Ridgeline Apps LLC";
+				TargetAttributes = {
+					AA0000000000000000000001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
+			buildConfigurationList = AA000000000000000000000B /* Build configuration list for PBXProject "RidgelineAscent" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA0000000000000000000003;
+			packageReferences = (
+				AA0000000000000000000011 /* XCLocalSwiftPackageReference "." */,
+			);
+			productRefGroup = AA0000000000000000000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA0000000000000000000001 /* RidgelineAscent */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA000000000000000000000A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0000000000000000000037 /* axe.wav in Resources */,
+				AA0000000000000000000039 /* cairn.wav in Resources */,
+				AA000000000000000000003B /* charm.wav in Resources */,
+				AA000000000000000000003D /* death.wav in Resources */,
+				AA000000000000000000003F /* flare.wav in Resources */,
+				AA0000000000000000000041 /* hit.wav in Resources */,
+				AA0000000000000000000043 /* hook.wav in Resources */,
+				AA0000000000000000000045 /* hurt.wav in Resources */,
+				AA0000000000000000000047 /* summit.wav in Resources */,
+				AA0000000000000000000049 /* ui.wav in Resources */,
+				AA000000000000000000004B /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA0000000000000000000008 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0000000000000000000021 /* SoundBoard.swift in Sources */,
+				AA0000000000000000000023 /* AppModel.swift in Sources */,
+				AA0000000000000000000025 /* RidgelineAscentApp.swift in Sources */,
+				AA0000000000000000000027 /* RidgeScene.swift in Sources */,
+				AA0000000000000000000029 /* ServiceHooks.swift in Sources */,
+				AA000000000000000000002B /* RidgePalette.swift in Sources */,
+				AA000000000000000000002D /* CairnChoiceView.swift in Sources */,
+				AA000000000000000000002F /* Components.swift in Sources */,
+				AA0000000000000000000031 /* ResultsView.swift in Sources */,
+				AA0000000000000000000033 /* RunView.swift in Sources */,
+				AA0000000000000000000035 /* TitleView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AA000000000000000000000D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AA000000000000000000000E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		AA000000000000000000000F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "";
+				"CODE_SIGN_IDENTITY[sdk=iphonesimulator*]" = "";
+				CODE_SIGN_STYLE = Manual;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/RidgelineAscent/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ridgelineapps.ridgelineascent;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		AA0000000000000000000010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "";
+				"CODE_SIGN_IDENTITY[sdk=iphonesimulator*]" = "";
+				CODE_SIGN_STYLE = Manual;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/RidgelineAscent/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ridgelineapps.ridgelineascent;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA000000000000000000000B /* Build configuration list for PBXProject "RidgelineAscent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA000000000000000000000D /* Debug */,
+				AA000000000000000000000E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA000000000000000000000C /* Build configuration list for PBXNativeTarget "RidgelineAscent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA000000000000000000000F /* Debug */,
+				AA0000000000000000000010 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		AA0000000000000000000011 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ".";
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AA0000000000000000000012 /* RidgelineCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000000000000000000011 /* XCLocalSwiftPackageReference "." */;
+			productName = RidgelineCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = AA0000000000000000000002 /* Project object */;
+}
