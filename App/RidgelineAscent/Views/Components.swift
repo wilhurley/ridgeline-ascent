@@ -50,10 +50,11 @@ struct MeterBar: View {
     let tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(title)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
                 .foregroundStyle(RidgePalette.muted)
+                .lineLimit(1)
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Color.white.opacity(0.08))
@@ -62,7 +63,7 @@ struct MeterBar: View {
                         .frame(width: max(CGFloat(4), proxy.size.width * CGFloat(fraction)))
                 }
             }
-            .frame(height: 8)
+            .frame(height: 5)
         }
     }
 }

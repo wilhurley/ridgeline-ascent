@@ -1,248 +1,244 @@
 import RidgelineCore
+import CoreImage
 import SpriteKit
 import UIKit
 
-enum RidgeArtCache {
-    private static var textures: [String: SKTexture] = [:]
+/// Painted ridge backgrounds. One catalog image per weather, softened once and reused.
+enum BackdropArt {
+    static let overscan: CGFloat = 1.08
 
-    static func sky(weather: WeatherKind, stage: StageID, size: CGSize) -> SKTexture {
-        let key = "sky-\(weather.rawValue)-\(stage.rawValue)-\(Int(size.width))x\(Int(size.height))"
-        if let cached = textures[key] { return cached }
-        let renderer = UIGraphicsImageRenderer(size: size)
+    private static var textures: [WeatherKind: SKTexture] = [:]
+    private static var vignettes: [String: SKTexture] = [:]
+    private static let context = CIContext(options: nil)
+
+    static func warm() {
+        for weather in WeatherKind.allCases {
+            _ = texture(for: weather)
+        }
+    }
+
+    static func texture(for weather: WeatherKind) -> SKTexture {
+        if let cached = textures[weather] { return cached }
+        let image = UIImage(named: assetName(weather)) ?? fallbackImage(weather)
+        let softened = soften(image)
+        let texture = SKTexture(image: softened)
+        texture.filteringMode = .linear
+        textures[weather] = texture
+        return texture
+    }
+
+    static func coverSize(for texture: SKTexture, screen: CGSize) -> CGSize {
+        let tex = texture.size()
+        let texW = tex.width > 1 ? tex.width : 720
+        let texH = tex.height > 1 ? tex.height : 1280
+        let scale = max(screen.width / texW, screen.height / texH) * overscan
+        return CGSize(width: texW * scale, height: texH * scale)
+    }
+
+    /// Soft darkening over the bright sky, where hazards first appear, feathered into the slope.
+    static func vignette(size: CGSize) -> SKTexture {
+        let key = "\(Int(size.width))x\(Int(size.height))"
+        if let cached = vignettes[key] { return cached }
+        let format = UIGraphicsImageRendererFormat()
+        format.opaque = false
+        format.scale = 2
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
         let image = renderer.image { context in
-            let pair = skyColors(weather: weather, stage: stage)
-            let colors = [pair.top.cgColor, pair.horizon.cgColor] as CFArray
+            let cg = context.cgContext
             let space = CGColorSpaceCreateDeviceRGB()
-            guard let gradient = CGGradient(colorsSpace: space, colors: colors, locations: [0, 1]) else { return }
+            let vertical = [
+                UIColor.black.withAlphaComponent(0.46).cgColor,
+                UIColor.black.withAlphaComponent(0.36).cgColor,
+                UIColor.black.withAlphaComponent(0.18).cgColor,
+                UIColor.black.withAlphaComponent(0.12).cgColor
+            ] as CFArray
+            if let gradient = CGGradient(colorsSpace: space, colors: vertical, locations: [0, 0.42, 0.68, 1]) {
+                cg.drawLinearGradient(
+                    gradient,
+                    start: .zero,
+                    end: CGPoint(x: 0, y: size.height),
+                    options: []
+                )
+            }
+            let edge = [
+                UIColor.black.withAlphaComponent(0).cgColor,
+                UIColor.black.withAlphaComponent(0).cgColor,
+                UIColor.black.withAlphaComponent(0.30).cgColor
+            ] as CFArray
+            if let gradient = CGGradient(colorsSpace: space, colors: edge, locations: [0, 0.45, 1]) {
+                let center = CGPoint(x: size.width * 0.5, y: size.height * 0.42)
+                let radius = max(size.width, size.height) * 0.75
+                cg.drawRadialGradient(
+                    gradient,
+                    startCenter: center,
+                    startRadius: 0,
+                    endCenter: center,
+                    endRadius: radius,
+                    options: []
+                )
+            }
+        }
+        let texture = SKTexture(image: image)
+        texture.filteringMode = .linear
+        vignettes[key] = texture
+        return texture
+    }
+
+    private static func assetName(_ weather: WeatherKind) -> String {
+        switch weather {
+        case .clear: return "backdrop_clear"
+        case .rain: return "backdrop_rain"
+        case .blizzard: return "backdrop_blizzard"
+        case .nightStorm: return "backdrop_night"
+        }
+    }
+
+    private static func soften(_ image: UIImage) -> UIImage {
+        guard let source = CIImage(image: image),
+              let filter = CIFilter(name: "CIGaussianBlur") else { return image }
+        filter.setValue(source.clampedToExtent(), forKey: kCIInputImageKey)
+        filter.setValue(4.0, forKey: kCIInputRadiusKey)
+        guard let output = filter.outputImage,
+              let cgImage = context.createCGImage(output, from: source.extent) else { return image }
+        return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
+    }
+
+    private static func fallbackImage(_ weather: WeatherKind) -> UIImage {
+        let size = CGSize(width: 720, height: 1280)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { context in
+            let top: UIColor
+            let horizon: UIColor
+            let ground: UIColor
+            switch weather {
+            case .clear:
+                top = RidgeSK.color(0x142033)
+                horizon = RidgeSK.color(0xC4784A)
+                ground = RidgeSK.color(0x1A242E)
+            case .rain:
+                top = RidgeSK.color(0x3A4550)
+                horizon = RidgeSK.color(0x5C6A74)
+                ground = RidgeSK.color(0x243038)
+            case .blizzard:
+                top = RidgeSK.color(0xC5D0D8)
+                horizon = RidgeSK.color(0x8FA0AE)
+                ground = RidgeSK.color(0x3E4C58)
+            case .nightStorm:
+                top = RidgeSK.color(0x10182C)
+                horizon = RidgeSK.color(0x243048)
+                ground = RidgeSK.color(0x10141C)
+            }
+            let colors = [top.cgColor, horizon.cgColor, ground.cgColor, ground.cgColor] as CFArray
+            let space = CGColorSpaceCreateDeviceRGB()
+            guard let gradient = CGGradient(colorsSpace: space, colors: colors, locations: [0, 0.34, 0.58, 1]) else { return }
             context.cgContext.drawLinearGradient(
                 gradient,
                 start: .zero,
                 end: CGPoint(x: 0, y: size.height),
                 options: []
             )
-            if weather == .clear {
-                let sun = CGRect(x: size.width * 0.68, y: size.height * 0.58, width: 34, height: 34)
-                UIColor(red: 0.93, green: 0.62, blue: 0.32, alpha: 0.95).setFill()
-                context.cgContext.fillEllipse(in: sun)
-            }
         }
-        let texture = SKTexture(image: image)
-        texture.filteringMode = .linear
-        textures[key] = texture
-        return texture
-    }
-
-    static func ridge(layer: Int, width: CGFloat) -> SKTexture {
-        let height: CGFloat = 480
-        let key = "ridge-\(layer)-\(Int(width))"
-        if let cached = textures[key] { return cached }
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height))
-        let image = renderer.image { context in
-            drawRidge(layer: layer, in: context.cgContext, size: CGSize(width: width, height: height))
-        }
-        let texture = SKTexture(image: image)
-        texture.filteringMode = .linear
-        textures[key] = texture
-        return texture
-    }
-
-    private static func skyColors(weather: WeatherKind, stage: StageID) -> (top: UIColor, horizon: UIColor) {
-        switch weather {
-        case .clear:
-            switch stage {
-            case .screeApproach:
-                return (RidgeSK.color(0x142033), RidgeSK.color(0xC4784A))
-            case .iceShelf:
-                return (RidgeSK.color(0x121C2E), RidgeSK.color(0x8A5A55))
-            case .crowsEave, .theCornice:
-                return (RidgeSK.color(0x0E1624), RidgeSK.color(0x5C4A62))
-            }
-        case .rain:
-            return (RidgeSK.color(0x1A2836), RidgeSK.color(0x4A6274))
-        case .blizzard:
-            return (RidgeSK.color(0x8FA4B8), RidgeSK.color(0xE4EDF4))
-        case .nightStorm:
-            return (RidgeSK.color(0x070B12), RidgeSK.color(0x241838))
-        }
-    }
-
-    private static func drawRidge(layer: Int, in context: CGContext, size: CGSize) {
-        let crest = ridgeCrest(layer: layer, width: size.width, height: size.height)
-        let path = CGMutablePath()
-        path.move(to: CGPoint(x: 0, y: size.height))
-        path.addLine(to: crest[0])
-        for point in crest.dropFirst() {
-            path.addLine(to: point)
-        }
-        path.addLine(to: CGPoint(x: size.width, y: size.height))
-        path.closeSubpath()
-
-        let fill: UIColor
-        let rim: UIColor
-        let haze: CGFloat
-        switch layer {
-        case 0:
-            fill = RidgeSK.color(0x9BB0C4, 0.95)
-            rim = RidgeSK.color(0xC9D7E4, 0.55)
-            haze = 0.28
-        case 1:
-            fill = RidgeSK.color(0x6E8498)
-            rim = RidgeSK.color(0xF2F7FB, 0.7)
-            haze = 0.18
-        case 2:
-            fill = RidgeSK.color(0x2C3A48)
-            rim = RidgeSK.color(0xF4F7FA, 0.9)
-            haze = 0.08
-        default:
-            fill = RidgeSK.color(0x171E28)
-            rim = RidgeSK.color(0xE7EEF4, 0.85)
-            haze = 0
-        }
-        context.setFillColor(fill.cgColor)
-        context.addPath(path)
-        context.fillPath()
-
-        context.setStrokeColor(rim.cgColor)
-        context.setLineWidth(layer >= 2 ? 3 : 2)
-        context.beginPath()
-        context.move(to: crest[0])
-        for point in crest.dropFirst() {
-            context.addLine(to: point)
-        }
-        context.strokePath()
-
-        if layer == 1 || layer == 2 {
-            context.setFillColor(UIColor.white.withAlphaComponent(0.82).cgColor)
-            for point in crest where Int(point.x) % 70 < 36 {
-                let cap = CGRect(x: point.x - 16, y: point.y - 7, width: 32, height: 8)
-                context.fill(cap)
-            }
-        }
-        if haze > 0 {
-            context.setFillColor(UIColor.white.withAlphaComponent(haze).cgColor)
-            context.fill(CGRect(x: 0, y: size.height * 0.62, width: size.width, height: size.height * 0.38))
-        }
-        if layer >= 3 {
-            context.setStrokeColor(RidgeSK.color(0xC4B29A, 0.7).cgColor)
-            context.setLineWidth(5)
-            context.beginPath()
-            if let first = crest.first {
-                context.move(to: CGPoint(x: first.x, y: first.y + 18))
-            }
-            for point in crest.dropFirst() {
-                context.addLine(to: CGPoint(x: point.x, y: point.y + 18))
-            }
-            context.strokePath()
-        }
-    }
-
-    static func haze(band: Int, width: CGFloat) -> SKTexture {
-        let height: CGFloat = 160
-        let key = "haze-\(band)-\(Int(width))"
-        if let cached = textures[key] { return cached }
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height))
-        let image = renderer.image { context in
-            let alpha: CGFloat = band == 0 ? 0.22 : (band == 1 ? 0.16 : 0.1)
-            let color = UIColor(red: 0.78, green: 0.84, blue: 0.9, alpha: alpha)
-            let colors = [UIColor.clear.cgColor, color.cgColor, UIColor.clear.cgColor] as CFArray
-            let space = CGColorSpaceCreateDeviceRGB()
-            guard let gradient = CGGradient(colorsSpace: space, colors: colors, locations: [0, 0.5, 1]) else { return }
-            context.cgContext.drawLinearGradient(
-                gradient,
-                start: .zero,
-                end: CGPoint(x: 0, y: height),
-                options: []
-            )
-        }
-        let texture = SKTexture(image: image)
-        texture.filteringMode = .linear
-        textures[key] = texture
-        return texture
-    }
-
-    private static func ridgeCrest(layer: Int, width: CGFloat, height: CGFloat) -> [CGPoint] {
-        let seeds: [[CGFloat]] = [
-            [0.62, 0.48, 0.7, 0.4, 0.58, 0.36, 0.66, 0.5],
-            [0.5, 0.34, 0.58, 0.28, 0.46, 0.22, 0.4],
-            [0.38, 0.18, 0.42, 0.14, 0.3, 0.2, 0.36],
-            [0.22, 0.08, 0.18, 0.05, 0.16, 0.1]
-        ]
-        let peaks = seeds[min(layer, seeds.count - 1)]
-        var points: [CGPoint] = []
-        let steps = peaks.count
-        for index in 0...steps {
-            let x = width * CGFloat(index) / CGFloat(steps)
-            let peak = peaks[min(index, peaks.count - 1)]
-            let y = height * (1 - peak)
-            points.append(CGPoint(x: x, y: y))
-        }
-        return points
     }
 }
 
+/// Full-screen painted backdrop, plus a ridge edge under the climber.
+/// The painting drifts a few points as altitude climbs and never shows its edge.
 final class ParallaxRidge: SKNode {
-    private var sky = SKSpriteNode()
-    private var tiles: [(SKSpriteNode, SKSpriteNode, CGFloat)] = []
-    private var builtWidth: CGFloat = 0
-    private var skyKey = ""
+    private let base = SKSpriteNode()
+    private let incoming = SKSpriteNode()
+    private let shade = SKSpriteNode()
+    private let ridge = SKShapeNode()
+    private var shown: WeatherKind?
+    private var fadingTo: WeatherKind?
+    private var builtSize = CGSize.zero
 
-    func sync(altitude: Double, weather: WeatherKind, stage: StageID, size: CGSize) {
+    func sync(altitude: Double, weather: WeatherKind, stage _: StageID, size: CGSize) {
         guard size.width > 1, size.height > 1 else { return }
-        if abs(builtWidth - size.width) > 1 {
-            rebuild(size: size)
+        if builtSize == .zero {
+            install()
+            BackdropArt.warm()
         }
-        let key = "\(weather.rawValue)-\(stage.rawValue)-\(Int(size.width))x\(Int(size.height))"
-        if key != skyKey {
-            sky.texture = RidgeArtCache.sky(weather: weather, stage: stage, size: size)
-            sky.size = size
-            skyKey = key
+        if abs(builtSize.width - size.width) > 1 || abs(builtSize.height - size.height) > 1 {
+            builtSize = size
+            shade.texture = BackdropArt.vignette(size: size)
+            shade.size = size
         }
-        let span: CGFloat = 480
-        let traveled = CGFloat(altitude)
-        for (first, second, factor) in tiles {
-            var scroll = (traveled * factor).truncatingRemainder(dividingBy: span)
-            if scroll < 0 { scroll += span }
-            first.position.y = -scroll
-            second.position.y = span - scroll
+        if shown == nil {
+            base.texture = BackdropArt.texture(for: weather)
+            shown = weather
+        } else if weather != shown, weather != fadingTo {
+            beginFade(to: weather)
+        }
+        let texture = base.texture ?? BackdropArt.texture(for: weather)
+        let fitted = BackdropArt.coverSize(for: texture, screen: size)
+        let slack = max(CGFloat(0), (fitted.height - size.height) * 0.5)
+        let drift = slack * CGFloat(tanh(altitude / 2800))
+        let origin = CGPoint(x: size.width * 0.5, y: size.height * 0.5 - drift)
+        for node in [base, incoming] {
+            node.size = fitted
+            node.position = origin
+        }
+        updateRidge(size: size, altitude: CGFloat(altitude))
+    }
+
+    private func install() {
+        for node in [base, incoming] {
+            node.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+            addChild(node)
+        }
+        base.zPosition = 0
+        incoming.zPosition = 1
+        incoming.alpha = 0
+        shade.anchorPoint = .zero
+        shade.zPosition = 2
+        addChild(shade)
+        ridge.fillColor = UIColor.black.withAlphaComponent(0.42)
+        ridge.strokeColor = .clear
+        ridge.lineWidth = 0
+        ridge.zPosition = 3
+        addChild(ridge)
+    }
+
+    private func beginFade(to weather: WeatherKind) {
+        incoming.removeAllActions()
+        if let fadingTo, fadingTo != weather, incoming.alpha > 0.45, let texture = incoming.texture {
+            base.texture = texture
+            shown = fadingTo
+        }
+        fadingTo = weather
+        incoming.texture = BackdropArt.texture(for: weather)
+        incoming.alpha = 0
+        incoming.run(.fadeIn(withDuration: 0.7)) { [weak self] in
+            guard let self, self.fadingTo == weather else { return }
+            self.base.texture = self.incoming.texture
+            self.incoming.alpha = 0
+            self.shown = weather
+            self.fadingTo = nil
         }
     }
 
-    private func rebuild(size: CGSize) {
-        removeAllChildren()
-        tiles.removeAll()
-        builtWidth = size.width
-        skyKey = ""
-        sky = SKSpriteNode()
-        sky.anchorPoint = .zero
-        sky.zPosition = 0
-        addChild(sky)
-        let factors: [CGFloat] = [0.05, 0.14, 0.28, 0.5]
-        let hazeFactors: [CGFloat] = [0.09, 0.21, 0.38]
-        for layer in 0..<4 {
-            let texture = RidgeArtCache.ridge(layer: layer, width: size.width)
-            let first = SKSpriteNode(texture: texture)
-            let second = SKSpriteNode(texture: texture)
-            for node in [first, second] {
-                node.anchorPoint = .zero
-                node.size = CGSize(width: size.width, height: 480)
-                node.zPosition = CGFloat(layer + 1)
-                addChild(node)
-            }
-            tiles.append((first, second, factors[layer]))
-            if layer < hazeFactors.count {
-                let hazeTexture = RidgeArtCache.haze(band: layer, width: size.width)
-                let hazeA = SKSpriteNode(texture: hazeTexture)
-                let hazeB = SKSpriteNode(texture: hazeTexture)
-                for node in [hazeA, hazeB] {
-                    node.anchorPoint = .zero
-                    node.size = CGSize(width: size.width, height: 160)
-                    node.position.y = 180
-                    node.zPosition = CGFloat(layer) + 1.5
-                    addChild(node)
-                }
-                tiles.append((hazeA, hazeB, hazeFactors[layer]))
-            }
+    private func updateRidge(size: CGSize, altitude: CGFloat) {
+        let crest = size.height * 0.34 - 12
+        let path = CGMutablePath()
+        let steps = 24
+        var top: [CGPoint] = []
+        var bottom: [CGPoint] = []
+        for index in 0...steps {
+            let x = size.width * CGFloat(index) / CGFloat(steps)
+            let wave = sin((x / size.width) * .pi * 2 + altitude * 0.004) * 5
+            let y = crest + CGFloat(wave)
+            top.append(CGPoint(x: x, y: y))
+            bottom.append(CGPoint(x: x, y: y - 22))
         }
+        path.move(to: top[0])
+        for point in top.dropFirst() {
+            path.addLine(to: point)
+        }
+        for point in bottom.reversed() {
+            path.addLine(to: point)
+        }
+        path.closeSubpath()
+        ridge.path = path
     }
 }
 
@@ -266,17 +262,17 @@ final class WeatherVeil: SKNode {
             snow?.isHidden = true
             streaks.forEach { $0.isHidden = true }
         case .rain:
-            dimmer.alpha = 0.22 * (1 - flash * 0.8)
+            dimmer.alpha = 0
             whiteout.alpha = 0
             snow?.isHidden = true
             moveRain(size: size, time: time)
         case .blizzard:
-            dimmer.alpha = 0.08
-            whiteout.alpha = 0.3 * (1 - flash)
+            dimmer.alpha = 0
+            whiteout.alpha = 0.08 * (1 - flash)
             snow?.isHidden = false
             streaks.forEach { $0.isHidden = true }
         case .nightStorm:
-            dimmer.alpha = 0.42 * (1 - flash)
+            dimmer.alpha = 0
             whiteout.alpha = 0
             snow?.isHidden = true
             streaks.forEach { $0.isHidden = true }

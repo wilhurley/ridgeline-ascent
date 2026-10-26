@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "backdrop_rain.jpg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

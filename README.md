@@ -31,7 +31,7 @@ Rocks come in three sizes. Pebbles are small and fast. Boulders are the middle. 
 
 Three climbers start with different tools and pace. Sera Quinn, the guide, is free and carries an ice axe. Pell Ash, the scout, costs 30 Embers and starts with a flare. Bram Holt, the hauler, costs 50 Embers, climbs slower, and hits harder. Unlocking spends Embers already earned. Painted coats are data only: a skin cannot change speed, health, or damage, and none are for sale yet.
 
-The ridge is drawn in code. Four mountain layers and three haze bands scroll at different speeds, the sky shifts with weather and stage, and the avalanche is a churning cloud. Climbers are silhouettes with a climbing bob. `ClimberRendering` is the seam for a later sprite sheet.
+The backdrop is a painted portrait for each weather (`backdrop_clear`, `backdrop_rain`, `backdrop_blizzard`, `backdrop_night` in the asset catalog). It covers the screen, drifts a few points as you climb, and crossfades when the weather changes. A soft dark vignette sits over the painting so hazards stay readable, and a plain ridge edge sits under the climber. The avalanche is still a churning cloud. Climbers are silhouettes with a climbing bob. `ClimberRendering` is the seam for a later sprite sheet.
 
 **How to Play** is five short cards on the title. **Equipment** (title and pause) lists climbers, the three tools with their numbers, every charm, the five tags and their 2/4 bonuses, fusions as `???` until that fusion has been in a run, the hazards, and the weather. Cairn cards show the charm name, tag, effect numbers, and what it combines with. The climb HUD shows tag progress. Pause lists the charms, bonuses, and fusions on this ascent. Results break Embers into ridge, summit, and charm yield.
 
@@ -110,7 +110,7 @@ A device build needs signing turned back on and a team selected. The Summit Pack
 - A camp that spends Embers on anything besides the two locked climbers
 - Enough charms for a 4-piece set inside one run
 - More fusions and a deeper boss pattern
-- Sprite-sheet art and scored audio (mountains, weather, and climbers are drawn in code; the sounds are short tones)
+- Higher-resolution backdrop paintings (these are 720×1280) and sprite-sheet climbers. The sounds are still short tones.
 - Selling a cosmetic coat (the high-camp coat id is reserved and does not change the rules)
 - A real rewarded-ad SDK, StoreKit 2, or Game Center authentication
 - Daily rules beyond the shared seed, the weather that seed rolls, and the leaderboard

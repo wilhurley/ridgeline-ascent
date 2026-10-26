@@ -14,7 +14,7 @@ struct RunView: View {
                     .id(app.runID)
                     .ignoresSafeArea()
             }
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 hud
                 if let weather = app.weatherCallout {
                     weatherCallout(weather)
@@ -24,8 +24,8 @@ struct RunView: View {
                     tutorialBanner(prompt)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
+            .padding(.horizontal, 12)
+            .padding(.top, 4)
             if app.showCairn {
                 CairnChoiceView(offers: app.cairnOffers) { id in
                     app.chooseCharm(id)
@@ -55,68 +55,70 @@ struct RunView: View {
     }
 
     private var hud: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .center, spacing: 8) {
+                VStack(alignment: .leading, spacing: 1) {
                     Text(app.hud.daily ? "Daily Ascent" : app.hud.stageName)
-                        .font(.system(size: 16, weight: .semibold, design: .serif))
-                    Text(app.hud.gear)
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundStyle(RidgePalette.ice)
+                        .font(.system(size: 15, weight: .semibold, design: .serif))
+                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        Text(app.hud.gear)
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundStyle(RidgePalette.ice)
+                        ForEach(0..<max(app.hud.charmCount, 1), id: \.self) { index in
+                            Circle()
+                                .fill(index < app.hud.charmCount ? RidgePalette.gold : Color.white.opacity(0.15))
+                                .frame(width: 5, height: 5)
+                        }
+                    }
                 }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 1) {
                     Text("\(app.hud.altitude) m")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .lineLimit(1)
                     Text("Score \(app.hud.score)")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
                         .foregroundStyle(RidgePalette.muted)
+                        .lineLimit(1)
                 }
-            }
-            HStack(spacing: 6) {
-                ForEach(0..<max(app.hud.charmCount, 1), id: \.self) { index in
-                    Circle()
-                        .fill(index < app.hud.charmCount ? RidgePalette.gold : Color.white.opacity(0.15))
-                        .frame(width: 7, height: 7)
-                }
-                Spacer()
                 Button {
                     app.togglePause()
                 } label: {
-                        Image(systemName: "pause.fill")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(RidgePalette.ink)
-                            .frame(width: 36, height: 28)
-                            .background(Color.white.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Pause")
+                    Image(systemName: "pause.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(RidgePalette.ink)
+                        .frame(width: 32, height: 26)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Pause")
             }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(app.tagProgress) { progress in
-                        let goal = progress.nextThreshold ?? max(progress.count, 2)
-                        Text("\(progress.tag.displayName) \(progress.count)/\(goal)")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(progress.count > 0 ? progress.tag.tint : RidgePalette.muted)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.white.opacity(progress.count > 0 ? 0.08 : 0.03))
-                            .clipShape(Capsule())
-                    }
+            HStack(spacing: 3) {
+                ForEach(app.tagProgress) { progress in
+                    let goal = progress.nextThreshold ?? max(progress.count, 2)
+                    Text("\(progress.tag.displayName) \(progress.count)/\(goal)")
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+                        .foregroundStyle(progress.count > 0 ? progress.tag.tint : RidgePalette.muted)
+                        .frame(maxWidth: .infinity)
                 }
             }
-            MeterBar(title: "Hold", fraction: app.hud.healthFraction, tint: RidgePalette.ice)
-            MeterBar(
-                title: "Avalanche",
-                fraction: app.hud.leadFraction,
-                tint: app.hud.leadFraction < 0.45 ? RidgePalette.danger : RidgePalette.muted
-            )
+            HStack(spacing: 8) {
+                MeterBar(title: "Hold", fraction: app.hud.healthFraction, tint: RidgePalette.ice)
+                MeterBar(
+                    title: "Avalanche",
+                    fraction: app.hud.leadFraction,
+                    tint: app.hud.leadFraction < 0.45 ? RidgePalette.danger : RidgePalette.muted
+                )
+            }
         }
-        .padding(12)
-        .background(Color.black.opacity(0.38))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(Color.black.opacity(0.46))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .foregroundStyle(RidgePalette.ink)
     }
 
