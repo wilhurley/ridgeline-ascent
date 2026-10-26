@@ -432,7 +432,9 @@ public final class RidgeSimulation {
                 kind: kind,
                 x: x,
                 y: climber.y + config.spawnAhead,
-                timeRemaining: weather.warningLead,
+                timeRemaining: weather.telegraphsRocks
+                    ? OpeningEase.telegraphLead(base: weather.warningLead, stage: stage, timeInStage: currentStageTime)
+                    : weather.warningLead,
                 vx: 0,
                 vy: -sample.hazardSpeed * spec.speedMultiplier,
                 health: spec.health,

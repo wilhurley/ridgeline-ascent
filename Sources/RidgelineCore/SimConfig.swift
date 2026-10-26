@@ -22,6 +22,8 @@ public struct SimConfig: Equatable {
     public var bossCloseSpeed: Double
     public var spawnAhead: Double
     public var hitInvulnerability: Double
+    /// Added on top of max health. Equal to one Scree Approach boulder hit.
+    public var openingHealthBonus: Double
     public var hitSlowDuration: Double
     public var hitSlowMultiplier: Double
     public var spawnsEnabled: Bool
@@ -35,7 +37,7 @@ public struct SimConfig: Equatable {
     public init(
         seed: UInt64 = 1,
         ridgeWidth: Double = 320,
-        climberRadius: Double = 14,
+        climberRadius: Double = 12,
         baseClimbSpeed: Double = 78,
         lateralSpeed: Double = 240,
         baseAttackDamage: Double = 16,
@@ -52,6 +54,7 @@ public struct SimConfig: Equatable {
         bossCloseSpeed: Double = 4.0,
         spawnAhead: Double = 320,
         hitInvulnerability: Double = 0.55,
+        openingHealthBonus: Double = 12,
         hitSlowDuration: Double = 0.75,
         hitSlowMultiplier: Double = 0.45,
         spawnsEnabled: Bool = true,
@@ -81,6 +84,7 @@ public struct SimConfig: Equatable {
         self.bossCloseSpeed = bossCloseSpeed
         self.spawnAhead = spawnAhead
         self.hitInvulnerability = hitInvulnerability
+        self.openingHealthBonus = openingHealthBonus
         self.hitSlowDuration = hitSlowDuration
         self.hitSlowMultiplier = hitSlowMultiplier
         self.spawnsEnabled = spawnsEnabled
@@ -93,6 +97,9 @@ public struct SimConfig: Equatable {
     }
 
     public static var standard: SimConfig { SimConfig() }
+
+    /// Painted body width. The collision circle is smaller than this so a graze on the coat misses.
+    public static let presentedClimberRadius: Double = 14
 
     var durations: [Double] {
         if stageDurations.count >= 3 {

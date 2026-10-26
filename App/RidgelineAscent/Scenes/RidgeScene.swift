@@ -52,16 +52,16 @@ final class RidgeScene: SKScene {
     override func update(_ currentTime: TimeInterval) {
         let moving = director?.ticksSimulation != false
         let pointsPerUnit = size.height / 560
-        let hitRadius = CGFloat(simulation.config.climberRadius)
+        let visualRadius = CGFloat(SimConfig.presentedClimberRadius)
         if !moving {
             lastTime = currentTime
-            _ = climberLean(dt: 0)
-            figure?.layout(pointsPerUnit: pointsPerUnit, hitRadius: hitRadius)
-            figure?.update(time: currentTime, gear: simulation.loadout.gearStyle, lean: 0, moving: false)
+            _ = climberHorizontalSpeed(dt: 0)
+            figure?.layout(pointsPerUnit: pointsPerUnit, hitRadius: visualRadius)
+            figure?.update(time: currentTime, gear: simulation.loadout.gearStyle, horizontalSpeed: 0, moving: false)
             return
         }
         let dt = frameDelta(currentTime)
-        let lean = climberLean(dt: dt)
+        let speed = climberHorizontalSpeed(dt: dt)
         simulation.tick(dt: dt)
         let effects = simulation.drainEffects()
         if laidOut {
@@ -70,8 +70,8 @@ final class RidgeScene: SKScene {
         } else {
             note(effects)
         }
-        figure?.layout(pointsPerUnit: pointsPerUnit, hitRadius: hitRadius)
-        figure?.update(time: currentTime, gear: simulation.loadout.gearStyle, lean: lean, moving: true)
+        figure?.layout(pointsPerUnit: pointsPerUnit, hitRadius: visualRadius)
+        figure?.update(time: currentTime, gear: simulation.loadout.gearStyle, horizontalSpeed: speed, moving: true)
         director?.sync(from: simulation)
     }
 
@@ -102,8 +102,8 @@ final class RidgeScene: SKScene {
         return min(dt, 0.05)
     }
 
-    /// Steer has no published velocity, so lean comes from how fast `x` is changing.
-    private func climberLean(dt: Double) -> CGFloat {
+    /// Steer has no published velocity, so facing and the step use how fast `x` is changing.
+    private func climberHorizontalSpeed(dt: Double) -> CGFloat {
         let x = simulation.climber.x
         if previousClimberX < 0 || dt <= 0 {
             previousClimberX = x
@@ -111,8 +111,7 @@ final class RidgeScene: SKScene {
         }
         let speed = (x - previousClimberX) / dt
         previousClimberX = x
-        let normalized = max(-1, min(1, speed / 220))
-        return CGFloat(normalized)
+        return CGFloat(speed)
     }
 
     private func layoutIfNeeded() {

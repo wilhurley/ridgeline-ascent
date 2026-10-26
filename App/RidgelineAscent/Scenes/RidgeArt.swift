@@ -193,7 +193,7 @@ final class ParallaxRidge: SKNode {
         shade.anchorPoint = .zero
         shade.zPosition = 2
         addChild(shade)
-        ridge.fillColor = UIColor.black.withAlphaComponent(0.42)
+        ridge.fillColor = UIColor.black.withAlphaComponent(0.16)
         ridge.strokeColor = .clear
         ridge.lineWidth = 0
         ridge.zPosition = 3
@@ -357,15 +357,14 @@ enum SpriteCatalog {
         return texture
     }
 
-    static func climberPoses(_ portrait: ClimberPortrait) -> (SKTexture, SKTexture)? {
-        let base: String
+    static func climberTexture(_ portrait: ClimberPortrait) -> SKTexture? {
+        let name: String
         switch portrait {
-        case .guide: base = "climber_guide"
-        case .scout: base = "climber_scout"
-        case .hauler: base = "climber_hauler"
+        case .guide: name = "climber_guide"
+        case .scout: name = "climber_scout"
+        case .hauler: name = "climber_hauler"
         }
-        guard let poseA = texture(named: base) else { return nil }
-        return (poseA, texture(named: base + "_b") ?? poseA)
+        return texture(named: name)
     }
 
     static func rockTexture(_ kind: HazardKind) -> SKTexture? {
@@ -406,10 +405,85 @@ enum WeatherSpriteTint {
     }
 }
 
-/// Drawing seam for the climber. `PaintedClimber` uses the catalog poses.
-/// `ClimberFigure` is the code-drawn stand-in when those images are missing.
+/// Walk built from one pose. Facing flips only after horizontal speed clears a dead zone,
+/// and it stays put when the climber stops.
+struct ClimberGait {
+    static let faceDeadzone: CGFloat = 56
+    static let stepThreshold: CGFloat = 24
+    static let fullSpeed: CGFloat = 240
+    static let maxLean: CGFloat = 0.14
+
+    private(set) var facing: CGFloat = 1
+    private var smoothedLean: CGFloat = 0
+    private var stepPhase: CGFloat = 0
+    private var lastTime: TimeInterval = 0
+
+    struct Pose {
+        var bob: CGFloat
+        var lean: CGFloat
+        var facing: CGFloat
+        var xStretch: CGFloat
+        var yStretch: CGFloat
+        var step: CGFloat
+    }
+
+    mutating func advance(time: TimeInterval, horizontalSpeed: CGFloat, moving: Bool) -> Pose {
+        let dt = frameStep(time)
+        let speed = moving ? horizontalSpeed : 0
+        if facing > 0, speed < -Self.faceDeadzone {
+            facing = -1
+        } else if facing < 0, speed > Self.faceDeadzone {
+            facing = 1
+        }
+        let walking = moving && abs(speed) > Self.stepThreshold
+        if walking {
+            stepPhase += dt * (3.4 + abs(speed) / 36)
+        }
+        let bob: CGFloat
+        let xStretch: CGFloat
+        let yStretch: CGFloat
+        let step: CGFloat
+        if walking {
+            let amp = 1.15 + min(abs(speed), Self.fullSpeed) / Self.fullSpeed * 1.35
+            step = sin(stepPhase)
+            bob = step * amp
+            yStretch = 1 + step * 0.045
+            xStretch = 1 - step * 0.03
+        } else {
+            step = 0
+            bob = sin(CGFloat(time) * 1.5) * 0.6
+            xStretch = 1
+            yStretch = 1
+        }
+        let travel = min(1, abs(speed) / Self.fullSpeed)
+        let target = walking ? -facing * travel * Self.maxLean : 0
+        smoothedLean += (target - smoothedLean) * 0.16
+        return Pose(
+            bob: bob,
+            lean: smoothedLean,
+            facing: facing,
+            xStretch: xStretch,
+            yStretch: yStretch,
+            step: step
+        )
+    }
+
+    private mutating func frameStep(_ time: TimeInterval) -> CGFloat {
+        let dt: CGFloat
+        if lastTime == 0 {
+            dt = 1.0 / 60.0
+        } else {
+            dt = CGFloat(min(0.05, max(0, time - lastTime)))
+        }
+        lastTime = time
+        return dt
+    }
+}
+
+/// Drawing seam for the climber. `PaintedClimber` uses the catalog pose.
+/// `ClimberFigure` is the code-drawn stand-in when that image is missing.
 protocol ClimberRendering: SKNode {
-    func update(time: TimeInterval, gear: GearStyle, lean: CGFloat, moving: Bool)
+    func update(time: TimeInterval, gear: GearStyle, horizontalSpeed: CGFloat, moving: Bool)
     func noteHit()
     func layout(pointsPerUnit: CGFloat, hitRadius: CGFloat)
 }
@@ -419,22 +493,20 @@ extension ClimberRendering {
     func layout(pointsPerUnit: CGFloat, hitRadius: CGFloat) {}
 }
 
-/// Painted climber. Pose A and B alternate while the ascent is moving.
+/// Painted climber. One pose, walked in code, for every portrait.
 final class PaintedClimber: SKNode, ClimberRendering {
-    private let poseA: SKTexture
-    private let poseB: SKTexture
+    private let pose: SKTexture
     private let shadow = SKShapeNode()
     private let rig = SKNode()
     private let outline = SKSpriteNode()
     private let glow = SKSpriteNode()
     private let body = SKSpriteNode()
+    private var gait = ClimberGait()
     private var hurt: CGFloat = 0
-    private var smoothedLean: CGFloat = 0
 
     init?(portrait: ClimberPortrait) {
-        guard let poses = SpriteCatalog.climberPoses(portrait) else { return nil }
-        poseA = poses.0
-        poseB = poses.1
+        guard let texture = SpriteCatalog.climberTexture(portrait) else { return nil }
+        pose = texture
         super.init()
         shadow.fillColor = UIColor.black.withAlphaComponent(0.32)
         shadow.strokeColor = .clear
@@ -454,7 +526,7 @@ final class PaintedClimber: SKNode, ClimberRendering {
         rig.addChild(outline)
         rig.addChild(body)
         addChild(rig)
-        applyPose(poseA)
+        applyPose(pose)
     }
 
     required init?(coder decoder: NSCoder) {
@@ -466,8 +538,9 @@ final class PaintedClimber: SKNode, ClimberRendering {
     }
 
     func layout(pointsPerUnit: CGFloat, hitRadius: CGFloat) {
-        let aspect = max(poseA.size().width, 1) / max(poseA.size().height, 1)
-        // The guide's body is as wide as the hit circle. Taller art keeps its proportions,
+        let aspect = max(pose.size().width, 1) / max(pose.size().height, 1)
+        // The guide's body is as wide as the painted diameter passed in. That diameter
+        // stays put when the collision circle shrinks. Taller art keeps its proportions,
         // so the hauler stays wider than the guide at the same height.
         let guideAspect: CGFloat = 51.0 / 122.0
         let height = CGFloat(hitRadius * 2) * pointsPerUnit / guideAspect
@@ -488,20 +561,16 @@ final class PaintedClimber: SKNode, ClimberRendering {
         )
     }
 
-    func update(time: TimeInterval, gear: GearStyle, lean: CGFloat, moving: Bool) {
+    func update(time: TimeInterval, gear: GearStyle, horizontalSpeed: CGFloat, moving: Bool) {
         _ = gear
-        smoothedLean += (lean - smoothedLean) * 0.22
         hurt *= 0.84
-        if moving {
-            let frame = Int(time / 0.22) % 2
-            applyPose(frame == 0 ? poseA : poseB)
-        }
-        let bob = CGFloat(sin(time * (moving ? 8.2 : 2.4))) * (moving ? 2.4 : 0.6)
-        rig.position.y = bob
-        rig.zRotation = smoothedLean * 0.22
-        let squash = hurt
-        rig.xScale = 1 + squash * 0.14
-        rig.yScale = 1 - squash * 0.18
+        let stride = gait.advance(time: time, horizontalSpeed: horizontalSpeed, moving: moving)
+        rig.position.y = stride.bob
+        rig.zRotation = stride.lean
+        let hitX = 1 + hurt * 0.12
+        let hitY = 1 - hurt * 0.16
+        rig.xScale = stride.facing * abs(hitX * stride.xStretch)
+        rig.yScale = hitY * stride.yStretch
     }
 
     private func applyPose(_ texture: SKTexture) {
@@ -740,8 +809,8 @@ final class ClimberFigure: SKNode, ClimberRendering {
     private let flare = SKNode()
     private let hook = SKNode()
     private let hammer = SKNode()
+    private var gait = ClimberGait()
     private var hurt: CGFloat = 0
-    private var smoothedLean: CGFloat = 0
 
     init(portrait: ClimberPortrait) {
         self.portrait = portrait
@@ -757,24 +826,24 @@ final class ClimberFigure: SKNode, ClimberRendering {
         hurt = 1
     }
 
-    func update(time: TimeInterval, gear: GearStyle, lean: CGFloat, moving: Bool) {
-        let pace: CGFloat = portrait == .hauler ? 6.2 : 8.4
-        let bob = CGFloat(sin(time * pace)) * (moving ? 1 : 0.25)
-        body.position.y = bob * (portrait == .scout ? 2.2 : 1.4)
-        leftLeg.zRotation = bob * 0.45
-        rightLeg.zRotation = -bob * 0.45
-        leftArm.zRotation = -bob * 0.55
-        rightArm.zRotation = bob * 0.35
-        scarf.position = CGPoint(x: CGFloat(sin(time * 6.5)) * 4, y: CGFloat(cos(time * 6.5)) * 1.5)
+    func update(time: TimeInterval, gear: GearStyle, horizontalSpeed: CGFloat, moving: Bool) {
+        hurt *= 0.84
+        let stride = gait.advance(time: time, horizontalSpeed: horizontalSpeed, moving: moving)
+        body.position.y = stride.bob * (portrait == .scout ? 1.15 : 1)
+        leftLeg.zRotation = stride.step * 0.4
+        rightLeg.zRotation = -stride.step * 0.4
+        leftArm.zRotation = -stride.step * 0.3
+        rightArm.zRotation = stride.step * 0.22
+        scarf.position = CGPoint(x: CGFloat(sin(time * 1.6)) * 2, y: CGFloat(cos(time * 1.6)) * 0.8)
         axe.isHidden = gear != .iceAxe || portrait == .hauler
         hammer.isHidden = !(gear == .iceAxe && portrait == .hauler)
         flare.isHidden = gear != .flare
         hook.isHidden = gear != .ropeHook
-        smoothedLean += (lean - smoothedLean) * 0.22
-        hurt *= 0.84
-        body.zRotation = smoothedLean * 0.2
-        body.xScale = 1 + hurt * 0.12
-        body.yScale = 1 - hurt * 0.16
+        body.zRotation = stride.lean
+        let hitX = 1 + hurt * 0.12
+        let hitY = 1 - hurt * 0.16
+        body.xScale = stride.facing * abs(hitX * stride.xStretch)
+        body.yScale = hitY * stride.yStretch
     }
 
     private func build() {

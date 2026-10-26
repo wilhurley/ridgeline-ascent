@@ -14,6 +14,57 @@ final class DifficultyTests: XCTestCase {
         XCTAssertTrue(boss.allowedKinds.contains(.stormCrow))
     }
 
+    func testStageOneOpensQuieterAndMeetsTheCurve() {
+        let open = DifficultyCurve.sample(stage: .screeApproach, timeInStage: 0, climbTime: 0)
+        let settled = DifficultyCurve.sample(
+            stage: .screeApproach,
+            timeInStage: OpeningEase.window,
+            climbTime: OpeningEase.window
+        )
+        XCTAssertEqual(open.spawnInterval, 1.28 * OpeningEase.spawnIntervalScale, accuracy: 0.001)
+        XCTAssertEqual(settled.spawnInterval, max(0.55, 1.28 - OpeningEase.window * 0.006), accuracy: 0.001)
+        XCTAssertEqual(open.hazardSpeed, 120 * OpeningEase.fallSpeedScale, accuracy: 0.001)
+        XCTAssertEqual(settled.hazardSpeed, 120, accuracy: 0.001)
+        XCTAssertGreaterThan(open.spawnInterval, settled.spawnInterval)
+        XCTAssertLessThan(open.hazardSpeed, settled.hazardSpeed)
+
+        let shelf = DifficultyCurve.sample(stage: .iceShelf, timeInStage: 0, climbTime: 70)
+        XCTAssertEqual(shelf.spawnInterval, 1.05, accuracy: 0.001)
+        XCTAssertEqual(shelf.hazardSpeed, 144, accuracy: 0.001)
+
+        let eased = spawnCount(applyEase: true)
+        let plain = spawnCount(applyEase: false)
+        let reduction = 1 - Double(eased) / Double(plain)
+        XCTAssertGreaterThan(reduction, 0.25)
+        XCTAssertLessThan(reduction, 0.30)
+    }
+
+    func testOpeningHitCircleAndHealthGiveOneMoreHit() {
+        let config = SimConfig.standard
+        let shrink = 1 - config.climberRadius / SimConfig.presentedClimberRadius
+        XCTAssertGreaterThanOrEqual(shrink, 0.10)
+        XCTAssertLessThanOrEqual(shrink, 0.15)
+        let boulderHit = DifficultyCurve.sample(stage: .screeApproach, timeInStage: 0, climbTime: 0).contactDamage
+        XCTAssertEqual(config.openingHealthBonus, boulderHit, accuracy: 0.001)
+        let sim = RidgeSimulation(config: config)
+        XCTAssertEqual(sim.climber.maxHealth, config.baseMaxHealth + config.openingHealthBonus, accuracy: 0.001)
+        XCTAssertEqual(sim.climber.health, sim.climber.maxHealth, accuracy: 0.001)
+        XCTAssertGreaterThan(config.hitInvulnerability, 0.4)
+    }
+
+    private func spawnCount(applyEase: Bool) -> Int {
+        var time = 0.55
+        var count = 0
+        while time < OpeningEase.window {
+            count += 1
+            let sample = DifficultyCurve.sample(stage: .screeApproach, timeInStage: time, climbTime: time)
+            let scale = OpeningEase.spawnScale(stage: .screeApproach, timeInStage: time)
+            let interval = applyEase ? sample.spawnInterval : sample.spawnInterval / scale
+            time += interval
+        }
+        return count
+    }
+
     func testCleanClimbTracksAShrinkingGap() {
         let sim = makeSim { config in
             config.spawnsEnabled = false

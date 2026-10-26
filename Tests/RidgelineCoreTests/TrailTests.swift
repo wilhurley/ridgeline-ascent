@@ -52,7 +52,7 @@ final class RockfallTests: XCTestCase {
         XCTAssertTrue(pebble.splitsInto.isEmpty)
     }
 
-    func testLowVisibilityTelegraphsRocksBeforeTheyExist() {
+    func testLowVisibilityTelegraphsRocksBeforeTheyExist() throws {
         let sim = makeSim { config in
             config.forcedWeather = .blizzard
             config.spawnsEnabled = true
@@ -65,6 +65,10 @@ final class RockfallTests: XCTestCase {
         XCTAssertFalse(sim.warnings.isEmpty)
         XCTAssertTrue(sim.warnings.allSatisfy { $0.kind.isRock })
         XCTAssertTrue(sim.hazards.isEmpty)
+        let warning = try XCTUnwrap(sim.warnings.first)
+        let baseLead = WeatherTable.definition(for: .blizzard).warningLead
+        XCTAssertGreaterThan(warning.timeRemaining, baseLead)
+        XCTAssertLessThan(warning.timeRemaining, baseLead + OpeningEase.telegraphBonus)
         sim.tick(dt: 1.1)
         XCTAssertFalse(sim.hazards.isEmpty)
         XCTAssertTrue(sim.hazards.allSatisfy { $0.kind.isRock })

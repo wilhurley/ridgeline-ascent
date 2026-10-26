@@ -87,7 +87,7 @@ public struct Loadout: Equatable {
             cooldown: max(0.12, config.baseAttackCooldown * (1 + cooldownFraction)),
             range: max(24, config.baseAttackRange * (1 + rangeFraction)),
             targets: max(1, 1 + extraTargets),
-            maxHealth: max(1, config.baseMaxHealth + bonusHealth),
+            maxHealth: max(1, config.baseMaxHealth + bonusHealth + config.openingHealthBonus),
             avalancheDrag: max(0, drag),
             armor: min(0.65, max(0, armor)),
             emberYield: max(0, emberYield),

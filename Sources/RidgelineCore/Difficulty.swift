@@ -76,6 +76,35 @@ public struct DifficultySample: Equatable {
     }
 }
 
+/// Stage 1 opens quieter, then meets the regular curve by the end of that stage.
+/// Later stages are unchanged. The spawn scale is chosen so a linear ramp
+/// removes about a quarter of the rocks across the first stage.
+public enum OpeningEase {
+    public static let window: Double = 70
+    public static let spawnIntervalScale: Double = 1.86
+    public static let fallSpeedScale: Double = 0.76
+    public static let telegraphBonus: Double = 0.2
+
+    /// 1 at the start of Scree Approach, 0 once `window` seconds have passed, and 0 on later stages.
+    public static func blend(stage: StageID, timeInStage: Double) -> Double {
+        guard stage == .screeApproach else { return 0 }
+        let t = min(max(timeInStage, 0), window)
+        return 1 - t / window
+    }
+
+    public static func spawnScale(stage: StageID, timeInStage: Double) -> Double {
+        1 + (spawnIntervalScale - 1) * blend(stage: stage, timeInStage: timeInStage)
+    }
+
+    public static func fallScale(stage: StageID, timeInStage: Double) -> Double {
+        1 - (1 - fallSpeedScale) * blend(stage: stage, timeInStage: timeInStage)
+    }
+
+    public static func telegraphLead(base: Double, stage: StageID, timeInStage: Double) -> Double {
+        base + telegraphBonus * blend(stage: stage, timeInStage: timeInStage)
+    }
+}
+
 public enum DifficultyCurve {
     /// Spawn pace, hazard toughness, and an avalanche-speed bonus.
     /// `timeInStage` is seconds since the current stage began.
@@ -117,9 +146,10 @@ public enum DifficultyCurve {
                 SpawnWeight(kind: .stormCrow, weight: 2)
             ]
         }
+        let spawnScale = OpeningEase.spawnScale(stage: stage, timeInStage: timeInStage)
         return DifficultySample(
-            spawnInterval: spawnInterval,
-            hazardSpeed: 120 + 24 * (index - 1),
+            spawnInterval: spawnInterval * spawnScale,
+            hazardSpeed: (120 + 24 * (index - 1)) * OpeningEase.fallScale(stage: stage, timeInStage: timeInStage),
             hazardHealth: 18 + 8 * (index - 1),
             contactDamage: 12 + 4 * (index - 1),
             avalancheBonus: 5 * (index - 1) + 0.015 * max(0, climbTime),
