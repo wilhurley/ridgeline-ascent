@@ -1,0 +1,219 @@
+{
+  "charms": [
+    {
+      "id": "rime_edge",
+      "name": "Rime Edge",
+      "tag": "frost",
+      "summary": "The axe keeps a tooth of ice and cuts deeper.",
+      "effects": [
+        { "type": "attackDamage", "fraction": 0.20 }
+      ]
+    },
+    {
+      "id": "hoarfrost_wake",
+      "name": "Hoarfrost Wake",
+      "tag": "frost",
+      "summary": "Cold air pools in your wake and drags on the avalanche.",
+      "effects": [
+        { "type": "avalancheDrag", "speed": 8 }
+      ]
+    },
+    {
+      "id": "sleet_ward",
+      "name": "Sleet Ward",
+      "tag": "frost",
+      "summary": "Rime crusts the coat and turns aside part of a blow.",
+      "effects": [
+        { "type": "contactArmor", "fraction": 0.12 }
+      ]
+    },
+    {
+      "id": "cinder_flare",
+      "name": "Cinder Flare",
+      "tag": "ember",
+      "summary": "The flare sticks, and whatever it touches keeps burning.",
+      "effects": [
+        { "type": "burnDamage", "amount": 5 }
+      ]
+    },
+    {
+      "id": "ember_tithe",
+      "name": "Ember Tithe",
+      "tag": "ember",
+      "summary": "The mountain pays a little extra for every step you keep.",
+      "effects": [
+        { "type": "emberYield", "fraction": 0.20 }
+      ]
+    },
+    {
+      "id": "updraft_strap",
+      "name": "Updraft Strap",
+      "tag": "gale",
+      "summary": "Sailcloth across the chest. The wind does some of the climbing.",
+      "effects": [
+        { "type": "climbSpeed", "fraction": 0.12 }
+      ]
+    },
+    {
+      "id": "shearwind",
+      "name": "Shearwind",
+      "tag": "gale",
+      "summary": "The swing throws a second cut on the crosswind.",
+      "effects": [
+        { "type": "extraTargets", "count": 1 }
+      ]
+    },
+    {
+      "id": "granite_hide",
+      "name": "Granite Hide",
+      "tag": "stone",
+      "summary": "Grit packs the seams until the coat feels like a wall.",
+      "effects": [
+        { "type": "maxHealth", "amount": 28 }
+      ]
+    },
+    {
+      "id": "cairn_anchor",
+      "name": "Cairn Anchor",
+      "tag": "stone",
+      "summary": "One stone set in the mind, and the avalanche loses its hurry.",
+      "effects": [
+        { "type": "avalancheDrag", "speed": 10 },
+        { "type": "contactArmor", "fraction": 0.08 }
+      ]
+    },
+    {
+      "id": "talus_step",
+      "name": "Talus Step",
+      "tag": "stone",
+      "summary": "Loose rock underfoot, and less wasted motion.",
+      "effects": [
+        { "type": "climbSpeed", "fraction": 0.08 },
+        { "type": "attackCooldown", "fraction": -0.08 }
+      ]
+    },
+    {
+      "id": "lantern_wisp",
+      "name": "Lantern Wisp",
+      "tag": "spirit",
+      "summary": "A small light walks ahead and lengthens the axe's reach.",
+      "effects": [
+        { "type": "attackRange", "fraction": 0.22 }
+      ]
+    },
+    {
+      "id": "vigil_spark",
+      "name": "Vigil Spark",
+      "tag": "spirit",
+      "summary": "At each cairn a spark settles back into the chest.",
+      "effects": [
+        { "type": "healOnCairn", "amount": 12 },
+        { "type": "emberYield", "fraction": 0.08 }
+      ]
+    }
+  ],
+  "fusions": [
+    {
+      "id": "glacial_pyre",
+      "name": "Glacial Pyre",
+      "summary": "Frost locks the burn in the cut. The axe leaves a brand of white fire.",
+      "requires": ["rime_edge", "cinder_flare"],
+      "effects": [
+        { "type": "attackDamage", "fraction": 0.15 },
+        { "type": "burnDamage", "amount": 4 }
+      ]
+    },
+    {
+      "id": "stormbind",
+      "name": "Stormbind",
+      "summary": "The gale takes the wisp by the hand and carries it from foe to foe.",
+      "requires": ["shearwind", "lantern_wisp"],
+      "effects": [
+        { "type": "extraTargets", "count": 1 },
+        { "type": "attackRange", "fraction": 0.18 }
+      ]
+    }
+  ],
+  "setBonuses": [
+    {
+      "id": "frost_2",
+      "tag": "frost",
+      "threshold": 2,
+      "name": "Rime Pair",
+      "summary": "Two frost charms stiffen the edge.",
+      "effects": [{ "type": "attackDamage", "fraction": 0.08 }]
+    },
+    {
+      "id": "frost_4",
+      "tag": "frost",
+      "threshold": 4,
+      "name": "Whiteout",
+      "summary": "Four frost charms make the storm hesitate.",
+      "effects": [{ "type": "avalancheDrag", "speed": 12 }]
+    },
+    {
+      "id": "ember_2",
+      "tag": "ember",
+      "threshold": 2,
+      "name": "Kindled Pair",
+      "summary": "Two ember charms bring more embers home.",
+      "effects": [{ "type": "emberYield", "fraction": 0.10 }]
+    },
+    {
+      "id": "ember_4",
+      "tag": "ember",
+      "threshold": 4,
+      "name": "Bonfire",
+      "summary": "Four ember charms leave a deeper burn.",
+      "effects": [{ "type": "burnDamage", "amount": 6 }]
+    },
+    {
+      "id": "gale_2",
+      "tag": "gale",
+      "threshold": 2,
+      "name": "Paired Gust",
+      "summary": "Two gale charms lift the stride.",
+      "effects": [{ "type": "climbSpeed", "fraction": 0.06 }]
+    },
+    {
+      "id": "gale_4",
+      "tag": "gale",
+      "threshold": 4,
+      "name": "Gale Crown",
+      "summary": "Four gale charms throw one more cut.",
+      "effects": [{ "type": "extraTargets", "count": 1 }]
+    },
+    {
+      "id": "stone_2",
+      "tag": "stone",
+      "threshold": 2,
+      "name": "Stacked Stone",
+      "summary": "Two stone charms thicken the coat.",
+      "effects": [{ "type": "maxHealth", "amount": 16 }]
+    },
+    {
+      "id": "stone_4",
+      "tag": "stone",
+      "threshold": 4,
+      "name": "Bedrock",
+      "summary": "Four stone charms shrug off a harder hit.",
+      "effects": [{ "type": "contactArmor", "fraction": 0.12 }]
+    },
+    {
+      "id": "spirit_2",
+      "tag": "spirit",
+      "threshold": 2,
+      "name": "Twin Sparks",
+      "summary": "Two spirit charms reach a little farther.",
+      "effects": [{ "type": "attackRange", "fraction": 0.10 }]
+    },
+    {
+      "id": "spirit_4",
+      "tag": "spirit",
+      "threshold": 4,
+      "name": "Vigil",
+      "summary": "Four spirit charms kindle a stronger cairn rest.",
+      "effects": [{ "type": "healOnCairn", "amount": 10 }]
+    }
+  ]
+}
