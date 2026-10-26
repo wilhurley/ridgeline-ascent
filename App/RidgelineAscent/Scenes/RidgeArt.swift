@@ -35,7 +35,7 @@ enum BackdropArt {
         return CGSize(width: texW * scale, height: texH * scale)
     }
 
-    /// Soft darkening over the bright sky, where hazards first appear, feathered into the slope.
+    /// Light touch on the peaks. The darker band sits over the lower slope where the climb happens.
     static func vignette(size: CGSize) -> SKTexture {
         let key = "\(Int(size.width))x\(Int(size.height))"
         if let cached = vignettes[key] { return cached }
@@ -47,12 +47,13 @@ enum BackdropArt {
             let cg = context.cgContext
             let space = CGColorSpaceCreateDeviceRGB()
             let vertical = [
-                UIColor.black.withAlphaComponent(0.46).cgColor,
+                UIColor.black.withAlphaComponent(0.04).cgColor,
+                UIColor.black.withAlphaComponent(0.05).cgColor,
+                UIColor.black.withAlphaComponent(0.16).cgColor,
                 UIColor.black.withAlphaComponent(0.36).cgColor,
-                UIColor.black.withAlphaComponent(0.18).cgColor,
-                UIColor.black.withAlphaComponent(0.12).cgColor
+                UIColor.black.withAlphaComponent(0.42).cgColor
             ] as CFArray
-            if let gradient = CGGradient(colorsSpace: space, colors: vertical, locations: [0, 0.42, 0.68, 1]) {
+            if let gradient = CGGradient(colorsSpace: space, colors: vertical, locations: [0, 0.40, 0.62, 0.82, 1]) {
                 cg.drawLinearGradient(
                     gradient,
                     start: .zero,
@@ -63,11 +64,11 @@ enum BackdropArt {
             let edge = [
                 UIColor.black.withAlphaComponent(0).cgColor,
                 UIColor.black.withAlphaComponent(0).cgColor,
-                UIColor.black.withAlphaComponent(0.30).cgColor
+                UIColor.black.withAlphaComponent(0.16).cgColor
             ] as CFArray
-            if let gradient = CGGradient(colorsSpace: space, colors: edge, locations: [0, 0.45, 1]) {
-                let center = CGPoint(x: size.width * 0.5, y: size.height * 0.42)
-                let radius = max(size.width, size.height) * 0.75
+            if let gradient = CGGradient(colorsSpace: space, colors: edge, locations: [0, 0.62, 1]) {
+                let center = CGPoint(x: size.width * 0.5, y: size.height * 0.78)
+                let radius = max(size.width, size.height) * 0.62
                 cg.drawRadialGradient(
                     gradient,
                     startCenter: center,
@@ -97,7 +98,7 @@ enum BackdropArt {
         guard let source = CIImage(image: image),
               let filter = CIFilter(name: "CIGaussianBlur") else { return image }
         filter.setValue(source.clampedToExtent(), forKey: kCIInputImageKey)
-        filter.setValue(4.0, forKey: kCIInputRadiusKey)
+        filter.setValue(1.0, forKey: kCIInputRadiusKey)
         guard let output = filter.outputImage,
               let cgImage = context.createCGImage(output, from: source.extent) else { return image }
         return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
@@ -344,13 +345,389 @@ enum RidgeDot {
     }()
 }
 
-/// Drawing seam for the climber. A sprite sheet can conform later and replace `ClimberFigure`
-/// inside `RidgeScene` without touching the simulation.
-protocol ClimberRendering: SKNode {
-    func update(time: TimeInterval, gear: GearStyle)
+enum SpriteCatalog {
+    private static var cache: [String: SKTexture] = [:]
+
+    static func texture(named name: String) -> SKTexture? {
+        if let cached = cache[name] { return cached }
+        guard let image = UIImage(named: name), image.size.width > 1, image.size.height > 1 else { return nil }
+        let texture = SKTexture(image: image)
+        texture.filteringMode = .linear
+        cache[name] = texture
+        return texture
+    }
+
+    static func climberPoses(_ portrait: ClimberPortrait) -> (SKTexture, SKTexture)? {
+        let base: String
+        switch portrait {
+        case .guide: base = "climber_guide"
+        case .scout: base = "climber_scout"
+        case .hauler: base = "climber_hauler"
+        }
+        guard let poseA = texture(named: base) else { return nil }
+        return (poseA, texture(named: base + "_b") ?? poseA)
+    }
+
+    static func rockTexture(_ kind: HazardKind) -> SKTexture? {
+        switch kind {
+        case .pebble: return texture(named: "rock_pebble")
+        case .boulder: return texture(named: "rock_boulder")
+        case .slab: return texture(named: "rock_slab")
+        default: return nil
+        }
+    }
+
+    static func fragmentTextures() -> [SKTexture] {
+        (1...4).compactMap { texture(named: "rock_frag\($0)") }
+    }
 }
 
-/// Code-drawn climber. Swap this class for a sprite-sheet node that adopts `ClimberRendering`.
+enum WeatherSpriteTint {
+    static func rock(_ weather: WeatherKind) -> (color: UIColor, blend: CGFloat) {
+        switch weather {
+        case .clear:
+            return (.white, 0)
+        case .rain:
+            return (UIColor(red: 0.42, green: 0.50, blue: 0.58, alpha: 1), 0.34)
+        case .blizzard:
+            return (UIColor(red: 0.58, green: 0.66, blue: 0.76, alpha: 1), 0.40)
+        case .nightStorm:
+            return (UIColor(red: 0.30, green: 0.38, blue: 0.55, alpha: 1), 0.52)
+        }
+    }
+
+    /// Fragments sit a step darker than the rock they broke from.
+    static func fragment(_ weather: WeatherKind) -> (color: UIColor, blend: CGFloat) {
+        let base = rock(weather)
+        if weather == .clear {
+            return (UIColor(red: 0.32, green: 0.30, blue: 0.27, alpha: 1), 0.42)
+        }
+        return (base.color, min(1, base.blend + 0.22))
+    }
+}
+
+/// Drawing seam for the climber. `PaintedClimber` uses the catalog poses.
+/// `ClimberFigure` is the code-drawn stand-in when those images are missing.
+protocol ClimberRendering: SKNode {
+    func update(time: TimeInterval, gear: GearStyle, lean: CGFloat, moving: Bool)
+    func noteHit()
+    func layout(pointsPerUnit: CGFloat, hitRadius: CGFloat)
+}
+
+extension ClimberRendering {
+    func noteHit() {}
+    func layout(pointsPerUnit: CGFloat, hitRadius: CGFloat) {}
+}
+
+/// Painted climber. Pose A and B alternate while the ascent is moving.
+final class PaintedClimber: SKNode, ClimberRendering {
+    private let poseA: SKTexture
+    private let poseB: SKTexture
+    private let shadow = SKShapeNode()
+    private let rig = SKNode()
+    private let outline = SKSpriteNode()
+    private let glow = SKSpriteNode()
+    private let body = SKSpriteNode()
+    private var hurt: CGFloat = 0
+    private var smoothedLean: CGFloat = 0
+
+    init?(portrait: ClimberPortrait) {
+        guard let poses = SpriteCatalog.climberPoses(portrait) else { return nil }
+        poseA = poses.0
+        poseB = poses.1
+        super.init()
+        shadow.fillColor = UIColor.black.withAlphaComponent(0.32)
+        shadow.strokeColor = .clear
+        shadow.zPosition = -2
+        addChild(shadow)
+
+        outline.color = .black
+        outline.colorBlendFactor = 1
+        outline.alpha = 0.55
+        outline.zPosition = -1
+        glow.color = .black
+        glow.colorBlendFactor = 1
+        glow.alpha = 0.22
+        glow.zPosition = -1.2
+        body.zPosition = 0
+        rig.addChild(glow)
+        rig.addChild(outline)
+        rig.addChild(body)
+        addChild(rig)
+        applyPose(poseA)
+    }
+
+    required init?(coder decoder: NSCoder) {
+        fatalError("PaintedClimber is built in code")
+    }
+
+    func noteHit() {
+        hurt = 1
+    }
+
+    func layout(pointsPerUnit: CGFloat, hitRadius: CGFloat) {
+        let aspect = max(poseA.size().width, 1) / max(poseA.size().height, 1)
+        // The guide's body is as wide as the hit circle. Taller art keeps its proportions,
+        // so the hauler stays wider than the guide at the same height.
+        let guideAspect: CGFloat = 51.0 / 122.0
+        let height = CGFloat(hitRadius * 2) * pointsPerUnit / guideAspect
+        let fittedWidth = height * aspect
+        let fitted = CGSize(width: fittedWidth, height: height)
+        body.size = fitted
+        outline.size = CGSize(width: fittedWidth * 1.07, height: height * 1.04)
+        glow.size = CGSize(width: fittedWidth * 1.16, height: height * 1.06)
+        let shadowHeight = max(6, height * 0.08)
+        shadow.path = CGPath(
+            ellipseIn: CGRect(
+                x: -fittedWidth * 0.32,
+                y: -height * 0.5 - shadowHeight * 0.25,
+                width: fittedWidth * 0.64,
+                height: shadowHeight
+            ),
+            transform: nil
+        )
+    }
+
+    func update(time: TimeInterval, gear: GearStyle, lean: CGFloat, moving: Bool) {
+        _ = gear
+        smoothedLean += (lean - smoothedLean) * 0.22
+        hurt *= 0.84
+        if moving {
+            let frame = Int(time / 0.22) % 2
+            applyPose(frame == 0 ? poseA : poseB)
+        }
+        let bob = CGFloat(sin(time * (moving ? 8.2 : 2.4))) * (moving ? 2.4 : 0.6)
+        rig.position.y = bob
+        rig.zRotation = smoothedLean * 0.22
+        let squash = hurt
+        rig.xScale = 1 + squash * 0.14
+        rig.yScale = 1 - squash * 0.18
+    }
+
+    private func applyPose(_ texture: SKTexture) {
+        body.texture = texture
+        outline.texture = texture
+        glow.texture = texture
+    }
+}
+
+/// A hazard on the ridge. Rocks use catalog sprites sized to the simulation radius.
+/// Missing art falls back to the drawn shapes.
+final class HazardVisual: SKNode {
+    let kind: HazardKind
+    private let shadow = SKShapeNode()
+    private let content = SKNode()
+    private let sprite: SKSpriteNode?
+    private var laidDiameter: CGFloat = -1
+    private var restingScale: CGFloat = 1
+
+    init(kind: HazardKind) {
+        self.kind = kind
+        if let texture = SpriteCatalog.rockTexture(kind) {
+            let node = SKSpriteNode(texture: texture)
+            sprite = node
+            super.init()
+            content.addChild(node)
+        } else {
+            sprite = nil
+            super.init()
+            content.addChild(Self.shape(for: kind))
+        }
+        shadow.fillColor = UIColor.black.withAlphaComponent(0.30)
+        shadow.strokeColor = .clear
+        shadow.zPosition = -1
+        addChild(shadow)
+        content.zPosition = 0
+        addChild(content)
+        zPosition = kind == .corniceTyrant ? 5 : 3
+    }
+
+    required init?(coder decoder: NSCoder) {
+        fatalError("HazardVisual is built in code")
+    }
+
+    func layout(radius: CGFloat, pointsPerUnit: CGFloat) {
+        let diameter = max(8, radius * 2 * pointsPerUnit)
+        guard abs(laidDiameter - diameter) > 0.5 else { return }
+        laidDiameter = diameter
+        if let sprite, let texture = sprite.texture {
+            let aspect = max(texture.size().width, 1) / max(texture.size().height, 1)
+            if aspect >= 1 {
+                sprite.size = CGSize(width: diameter, height: diameter / aspect)
+            } else {
+                sprite.size = CGSize(width: diameter * aspect, height: diameter)
+            }
+            restingScale = 1
+        } else {
+            let natural: CGFloat
+            switch kind {
+            case .pebble: natural = 10
+            case .boulder: natural = 20
+            case .slab: natural = 52
+            case .corniceTyrant: natural = 90
+            default: natural = 28
+            }
+            restingScale = diameter / natural
+        }
+        if content.action(forKey: "pulse") == nil {
+            content.setScale(restingScale)
+        }
+        let footprint = sprite?.size.height ?? diameter
+        let span = sprite?.size.width ?? diameter
+        let shadowWidth = span * (kind == .slab || kind == .corniceTyrant ? 0.8 : 0.7)
+        let shadowHeight = max(4, footprint * 0.18)
+        shadow.path = CGPath(
+            ellipseIn: CGRect(
+                x: -shadowWidth / 2,
+                y: -footprint * 0.5 - shadowHeight * 0.2,
+                width: shadowWidth,
+                height: shadowHeight
+            ),
+            transform: nil
+        )
+    }
+
+    func apply(time: TimeInterval, weather: WeatherKind, velocityX: CGFloat) {
+        guard let sprite else { return }
+        let rate: CGFloat
+        switch kind {
+        case .pebble: rate = 1.7
+        case .boulder: rate = 0.85
+        case .slab: rate = 0.38
+        default: rate = 0
+        }
+        let direction: CGFloat = velocityX >= 0 ? 1 : -1
+        let turns = CGFloat(time) * rate * direction
+        sprite.zRotation = turns.truncatingRemainder(dividingBy: .pi * 2) + CGFloat(kind.rawValue.count) * 0.4
+        let tint = WeatherSpriteTint.rock(weather)
+        sprite.color = tint.color
+        sprite.colorBlendFactor = tint.blend
+    }
+
+    /// Crows face their travel. The flip sits on the drawn shape so a hit pulse can scale the parent.
+    func setFacing(flipX: Bool) {
+        guard kind == .stormCrow else { return }
+        let sign: CGFloat = flipX ? -1 : 1
+        for child in content.children {
+            let magnitude = max(abs(child.xScale), 0.01)
+            child.xScale = magnitude * sign
+        }
+    }
+
+    func pulse() {
+        content.removeAction(forKey: "pulse")
+        let base = restingScale
+        content.run(.sequence([
+            .scale(to: base * 1.12, duration: 0.04),
+            .scale(to: base, duration: 0.08)
+        ]), withKey: "pulse")
+    }
+
+    private static func shape(for kind: HazardKind) -> SKShapeNode {
+        let node: SKShapeNode
+        switch kind {
+        case .pebble:
+            node = SKShapeNode(path: pebblePath())
+            node.fillColor = RidgeSK.color(0xD5CBBF)
+            node.strokeColor = .clear
+        case .boulder:
+            node = SKShapeNode(path: rockPath())
+            node.fillColor = RidgeSK.color(0x8C8175)
+            node.strokeColor = .clear
+        case .slab:
+            node = SKShapeNode(path: slabPath())
+            node.fillColor = RidgeSK.color(0x4E4944)
+            node.strokeColor = .clear
+        case .iceWraith:
+            node = SKShapeNode(path: diamond(radius: 16))
+            node.fillColor = RidgeSK.color(0x8FCBD6, 0.85)
+            node.strokeColor = .white
+            node.glowWidth = 3
+        case .stormCrow:
+            node = SKShapeNode(path: chevron())
+            node.fillColor = RidgeSK.color(0x1B2430)
+            node.strokeColor = RidgeSK.color(0x7FB3C8)
+            node.lineWidth = 1.5
+        case .corniceTyrant:
+            node = SKShapeNode(path: tyrantPath())
+            node.fillColor = RidgeSK.color(0x243140, 0.95)
+            node.strokeColor = RidgeSK.color(0xE7EEF4)
+            node.lineWidth = 2
+            node.glowWidth = 2
+        }
+        node.lineWidth = max(node.lineWidth, kind == .iceWraith || kind == .stormCrow || kind == .corniceTyrant ? node.lineWidth : 0)
+        return node
+    }
+
+    private static func pebblePath() -> CGPath {
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: -4, y: -3))
+        path.addLine(to: CGPoint(x: -2, y: 4))
+        path.addLine(to: CGPoint(x: 4, y: 3))
+        path.addLine(to: CGPoint(x: 5, y: -2))
+        path.addLine(to: CGPoint(x: 1, y: -4))
+        path.closeSubpath()
+        return path
+    }
+
+    private static func slabPath() -> CGPath {
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: -26, y: -12))
+        path.addLine(to: CGPoint(x: -22, y: 6))
+        path.addLine(to: CGPoint(x: -8, y: 14))
+        path.addLine(to: CGPoint(x: 10, y: 12))
+        path.addLine(to: CGPoint(x: 24, y: 4))
+        path.addLine(to: CGPoint(x: 20, y: -14))
+        path.closeSubpath()
+        return path
+    }
+
+    private static func rockPath() -> CGPath {
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: -8, y: -6))
+        path.addLine(to: CGPoint(x: -4, y: 8))
+        path.addLine(to: CGPoint(x: 6, y: 7))
+        path.addLine(to: CGPoint(x: 10, y: -2))
+        path.addLine(to: CGPoint(x: 3, y: -9))
+        path.closeSubpath()
+        return path
+    }
+
+    private static func diamond(radius: CGFloat) -> CGPath {
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: 0, y: radius))
+        path.addLine(to: CGPoint(x: radius * 0.72, y: 0))
+        path.addLine(to: CGPoint(x: 0, y: -radius))
+        path.addLine(to: CGPoint(x: -radius * 0.72, y: 0))
+        path.closeSubpath()
+        return path
+    }
+
+    private static func chevron() -> CGPath {
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: -12, y: 4))
+        path.addLine(to: CGPoint(x: 0, y: 0))
+        path.addLine(to: CGPoint(x: -12, y: -4))
+        path.addLine(to: CGPoint(x: -8, y: 0))
+        path.closeSubpath()
+        return path
+    }
+
+    private static func tyrantPath() -> CGPath {
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: -46, y: -10))
+        path.addLine(to: CGPoint(x: -28, y: 18))
+        path.addLine(to: CGPoint(x: -8, y: 6))
+        path.addLine(to: CGPoint(x: 6, y: 26))
+        path.addLine(to: CGPoint(x: 22, y: 4))
+        path.addLine(to: CGPoint(x: 42, y: 16))
+        path.addLine(to: CGPoint(x: 36, y: -14))
+        path.closeSubpath()
+        return path
+    }
+}
+
+/// Code-drawn climber. Used when the painted poses are missing from the catalog.
 final class ClimberFigure: SKNode, ClimberRendering {
     private let portrait: ClimberPortrait
     private let body = SKNode()
@@ -363,6 +740,8 @@ final class ClimberFigure: SKNode, ClimberRendering {
     private let flare = SKNode()
     private let hook = SKNode()
     private let hammer = SKNode()
+    private var hurt: CGFloat = 0
+    private var smoothedLean: CGFloat = 0
 
     init(portrait: ClimberPortrait) {
         self.portrait = portrait
@@ -374,9 +753,13 @@ final class ClimberFigure: SKNode, ClimberRendering {
         fatalError("ClimberFigure is built in code")
     }
 
-    func update(time: TimeInterval, gear: GearStyle) {
+    func noteHit() {
+        hurt = 1
+    }
+
+    func update(time: TimeInterval, gear: GearStyle, lean: CGFloat, moving: Bool) {
         let pace: CGFloat = portrait == .hauler ? 6.2 : 8.4
-        let bob = CGFloat(sin(time * pace))
+        let bob = CGFloat(sin(time * pace)) * (moving ? 1 : 0.25)
         body.position.y = bob * (portrait == .scout ? 2.2 : 1.4)
         leftLeg.zRotation = bob * 0.45
         rightLeg.zRotation = -bob * 0.45
@@ -387,6 +770,11 @@ final class ClimberFigure: SKNode, ClimberRendering {
         hammer.isHidden = !(gear == .iceAxe && portrait == .hauler)
         flare.isHidden = gear != .flare
         hook.isHidden = gear != .ropeHook
+        smoothedLean += (lean - smoothedLean) * 0.22
+        hurt *= 0.84
+        body.zRotation = smoothedLean * 0.2
+        body.xScale = 1 + hurt * 0.12
+        body.yScale = 1 - hurt * 0.16
     }
 
     private func build() {

@@ -31,7 +31,9 @@ Rocks come in three sizes. Pebbles are small and fast. Boulders are the middle. 
 
 Three climbers start with different tools and pace. Sera Quinn, the guide, is free and carries an ice axe. Pell Ash, the scout, costs 30 Embers and starts with a flare. Bram Holt, the hauler, costs 50 Embers, climbs slower, and hits harder. Unlocking spends Embers already earned. Painted coats are data only: a skin cannot change speed, health, or damage, and none are for sale yet.
 
-The backdrop is a painted portrait for each weather (`backdrop_clear`, `backdrop_rain`, `backdrop_blizzard`, `backdrop_night` in the asset catalog). It covers the screen, drifts a few points as you climb, and crossfades when the weather changes. A soft dark vignette sits over the painting so hazards stay readable, and a plain ridge edge sits under the climber. The avalanche is still a churning cloud. Climbers are silhouettes with a climbing bob. `ClimberRendering` is the seam for a later sprite sheet.
+The backdrop is a painted portrait for each weather (`backdrop_clear`, `backdrop_rain`, `backdrop_blizzard`, `backdrop_night` in the asset catalog). It covers the screen, drifts a few points as you climb, and crossfades when the weather changes. A light blur keeps the peaks sharp. The dark vignette sits mainly on the lower slope, with a plain ridge edge under the climber. The avalanche is still a churning cloud.
+
+Climbers and rocks are painted sprites (`climber_guide`, `climber_scout`, `climber_hauler`, plus a `_b` pose, and `rock_pebble`, `rock_boulder`, `rock_slab`). While the ascent is moving, the two poses alternate, the body bobs, and it leans a little into the steer. A hit squashes the figure. Rocks tumble, pick up a cooler tint in rain, blizzard, and night, and throw `rock_frag` chips when they break. A slab still splits into a boulder and a pebble. Each sprite has a soft shadow, and the climber has a faint dark rim so it stays separate from the slope. Sprite size follows the existing hit circles. If a catalog image is missing, the code-drawn climber and rock shapes are used instead.
 
 **How to Play** is five short cards on the title. **Equipment** (title and pause) lists climbers, the three tools with their numbers, every charm, the five tags and their 2/4 bonuses, fusions as `???` until that fusion has been in a run, the hazards, and the weather. Cairn cards show the charm name, tag, effect numbers, and what it combines with. The climb HUD shows tag progress. Pause lists the charms, bonuses, and fusions on this ascent. Results break Embers into ridge, summit, and charm yield.
 
@@ -110,7 +112,7 @@ A device build needs signing turned back on and a team selected. The Summit Pack
 - A camp that spends Embers on anything besides the two locked climbers
 - Enough charms for a 4-piece set inside one run
 - More fusions and a deeper boss pattern
-- Higher-resolution backdrop paintings (these are 720×1280) and sprite-sheet climbers. The sounds are still short tones.
+- Higher-resolution backdrop paintings (these are 720×1280). The sounds are still short tones.
 - Selling a cosmetic coat (the high-camp coat id is reserved and does not change the rules)
 - A real rewarded-ad SDK, StoreKit 2, or Game Center authentication
 - Daily rules beyond the shared seed, the weather that seed rolls, and the leaderboard

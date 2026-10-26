@@ -21,7 +21,8 @@ final class RidgeScene: SKScene {
     private let flash = SKSpriteNode(color: .white, size: .zero)
     private var avalancheDrift: SKEmitterNode?
     private var figure: ClimberRendering?
-    private var hazardNodes: [Int: SKShapeNode] = [:]
+    private var hazardNodes: [Int: HazardVisual] = [:]
+    private var previousClimberX = -1.0
     private var omenNodes: [Int: SKShapeNode] = [:]
     private var lastTime: TimeInterval = 0
     private var trauma: CGFloat = 0
@@ -49,12 +50,18 @@ final class RidgeScene: SKScene {
     }
 
     override func update(_ currentTime: TimeInterval) {
-        if director?.ticksSimulation == false {
+        let moving = director?.ticksSimulation != false
+        let pointsPerUnit = size.height / 560
+        let hitRadius = CGFloat(simulation.config.climberRadius)
+        if !moving {
             lastTime = currentTime
-            figure?.update(time: currentTime, gear: simulation.loadout.gearStyle)
+            _ = climberLean(dt: 0)
+            figure?.layout(pointsPerUnit: pointsPerUnit, hitRadius: hitRadius)
+            figure?.update(time: currentTime, gear: simulation.loadout.gearStyle, lean: 0, moving: false)
             return
         }
         let dt = frameDelta(currentTime)
+        let lean = climberLean(dt: dt)
         simulation.tick(dt: dt)
         let effects = simulation.drainEffects()
         if laidOut {
@@ -63,7 +70,8 @@ final class RidgeScene: SKScene {
         } else {
             note(effects)
         }
-        figure?.update(time: currentTime, gear: simulation.loadout.gearStyle)
+        figure?.layout(pointsPerUnit: pointsPerUnit, hitRadius: hitRadius)
+        figure?.update(time: currentTime, gear: simulation.loadout.gearStyle, lean: lean, moving: true)
         director?.sync(from: simulation)
     }
 
@@ -92,6 +100,19 @@ final class RidgeScene: SKScene {
         lastTime = currentTime
         if !dt.isFinite || dt <= 0 { return 1.0 / 60.0 }
         return min(dt, 0.05)
+    }
+
+    /// Steer has no published velocity, so lean comes from how fast `x` is changing.
+    private func climberLean(dt: Double) -> CGFloat {
+        let x = simulation.climber.x
+        if previousClimberX < 0 || dt <= 0 {
+            previousClimberX = x
+            return 0
+        }
+        let speed = (x - previousClimberX) / dt
+        previousClimberX = x
+        let normalized = max(-1, min(1, speed / 220))
+        return CGFloat(normalized)
     }
 
     private func layoutIfNeeded() {
@@ -158,13 +179,16 @@ final class RidgeScene: SKScene {
             case .attackFired(let style, let fromX, let fromY, let toX, let toY):
                 drawStrike(style: style, from: CGPoint(x: screenX(fromX), y: screenY(fromY)), to: CGPoint(x: screenX(toX), y: screenY(toY)))
             case .hazardDamaged(let id):
-                hazardNodes[id]?.run(.sequence([
-                    .scale(to: 1.2, duration: 0.04),
-                    .scale(to: 1, duration: 0.08)
-                ]))
-            case .hazardDefeated(_, let x, let y):
-                burst(at: CGPoint(x: screenX(x), y: screenY(y)), color: RidgeSK.color(0xE7EEF4))
+                hazardNodes[id]?.pulse()
+            case .hazardDefeated(let kind, let x, let y):
+                let point = CGPoint(x: screenX(x), y: screenY(y))
+                if kind.isRock {
+                    emitFragments(at: point, weather: simulation.weather.kind)
+                } else {
+                    burst(at: point, color: RidgeSK.color(0xE7EEF4))
+                }
             case .climberDamaged(_):
+                figure?.noteHit()
                 flash.alpha = 0.45
                 flash.color = RidgeSK.color(0xD85A4A)
                 flash.run(.fadeOut(withDuration: 0.18))
@@ -177,8 +201,8 @@ final class RidgeScene: SKScene {
                 flash.alpha = 0.4
                 flash.color = .white
                 flash.run(.fadeOut(withDuration: 0.3))
-            case .hazardSplit(_, let x, let y):
-                burst(at: CGPoint(x: screenX(x), y: screenY(y)), color: RidgeSK.color(0xC4B8AA))
+            case .hazardSplit:
+                break
             case .lightningFlash:
                 flash.alpha = 0.62
                 flash.color = .white
@@ -274,15 +298,17 @@ final class RidgeScene: SKScene {
         var seen = Set<Int>()
         for hazard in simulation.hazards {
             seen.insert(hazard.id)
-            let node = hazardNodes[hazard.id] ?? makeHazardNode(hazard.kind)
+            let node = hazardNodes[hazard.id] ?? HazardVisual(kind: hazard.kind)
             if node.parent == nil {
                 playfield.addChild(node)
                 hazardNodes[hazard.id] = node
             }
             node.position = CGPoint(x: screenX(hazard.x), y: screenY(hazard.y))
             node.alpha = simulation.isConcealed(hazard) ? 0 : 1
+            node.layout(radius: CGFloat(hazard.radius), pointsPerUnit: size.height / 560)
+            node.apply(time: time, weather: simulation.weather.kind, velocityX: CGFloat(hazard.vx))
             if hazard.kind == .stormCrow {
-                node.xScale = hazard.vx >= 0 ? 1 : -1
+                node.setFacing(flipX: hazard.vx < 0)
             }
         }
         let stale = hazardNodes.keys.filter { !seen.contains($0) }
@@ -333,62 +359,54 @@ final class RidgeScene: SKScene {
 
     private func installFigure() {
         let portrait = ClimberRoster.profile(id: simulation.config.climberID).portrait
-        let next = ClimberFigure(portrait: portrait)
+        let next: ClimberRendering = PaintedClimber(portrait: portrait) ?? ClimberFigure(portrait: portrait)
         figure = next
         climber.removeAllChildren()
         climber.addChild(next)
     }
 
-    private func makeHazardNode(_ kind: HazardKind) -> SKShapeNode {
-        let node: SKShapeNode
-        switch kind {
-        case .pebble:
-            node = SKShapeNode(path: pebblePath())
-            node.fillColor = RidgeSK.color(0xD5CBBF)
-            node.strokeColor = RidgeSK.color(0xF7FBFF, 0.7)
-            node.lineWidth = 1
-        case .boulder:
-            node = SKShapeNode(path: rockPath())
-            node.fillColor = RidgeSK.color(0x8C8175)
-            node.strokeColor = RidgeSK.color(0xE7EEF4, 0.55)
-            node.lineWidth = 1.5
-        case .slab:
-            node = SKShapeNode(path: slabPath())
-            node.fillColor = RidgeSK.color(0x4E4944)
-            node.strokeColor = RidgeSK.color(0xF4F7FA, 0.9)
-            node.lineWidth = 2
-        case .iceWraith:
-            node = SKShapeNode(path: diamond(radius: 16))
-            node.fillColor = RidgeSK.color(0x8FCBD6, 0.85)
-            node.strokeColor = .white
-            node.glowWidth = 3
-        case .stormCrow:
-            node = SKShapeNode(path: chevron())
-            node.fillColor = RidgeSK.color(0x1B2430)
-            node.strokeColor = RidgeSK.color(0x7FB3C8)
-            node.lineWidth = 1.5
-        case .corniceTyrant:
-            node = SKShapeNode(path: tyrantPath())
-            node.fillColor = RidgeSK.color(0x243140, 0.95)
-            node.strokeColor = RidgeSK.color(0xE7EEF4)
-            node.lineWidth = 2
-            node.glowWidth = 2
+    private func emitFragments(at point: CGPoint, weather: WeatherKind) {
+        let textures = SpriteCatalog.fragmentTextures()
+        guard !textures.isEmpty else {
+            burst(at: point, color: RidgeSK.color(0xC4B8AA))
+            return
         }
-        node.lineWidth = max(node.lineWidth, CGFloat(1))
-        node.zPosition = kind == .corniceTyrant ? 5 : 3
-        let shadowWidth: CGFloat
-        switch kind {
-        case .pebble: shadowWidth = 16
-        case .slab, .corniceTyrant: shadowWidth = 54
-        default: shadowWidth = 28
+        let tint = WeatherSpriteTint.fragment(weather)
+        let points = max(size.height / 560, 0.5)
+        for index in 0..<8 {
+            let holder = SKNode()
+            holder.position = point
+            holder.zPosition = 8
+            let texture = textures[index % textures.count]
+            let chip = SKSpriteNode(texture: texture)
+            let side = CGFloat.random(in: 5...9) * points
+            let aspect = max(texture.size().width, 1) / max(texture.size().height, 1)
+            if aspect >= 1 {
+                chip.size = CGSize(width: side, height: side / aspect)
+            } else {
+                chip.size = CGSize(width: side * aspect, height: side)
+            }
+            chip.color = tint.color
+            chip.colorBlendFactor = tint.blend
+            let shadow = SKShapeNode(ellipseOf: CGSize(width: side * 0.7, height: max(3, side * 0.22)))
+            shadow.fillColor = UIColor.black.withAlphaComponent(0.28)
+            shadow.strokeColor = .clear
+            shadow.position = CGPoint(x: 1, y: -side * 0.32)
+            shadow.zPosition = -1
+            holder.addChild(shadow)
+            holder.addChild(chip)
+            playfield.addChild(holder)
+            let angle = CGFloat.random(in: 0...(2 * .pi))
+            let distance = CGFloat.random(in: 16...42)
+            chip.run(.rotate(byAngle: CGFloat.random(in: -2.2...2.2), duration: 0.42))
+            holder.run(.sequence([
+                .group([
+                    .moveBy(x: cos(angle) * distance, y: sin(angle) * distance * 0.55 - 6, duration: 0.42),
+                    .fadeOut(withDuration: 0.42)
+                ]),
+                .removeFromParent()
+            ]))
         }
-        let shadow = SKShapeNode(ellipseOf: CGSize(width: shadowWidth, height: 8))
-        shadow.fillColor = UIColor.black.withAlphaComponent(0.3)
-        shadow.strokeColor = .clear
-        shadow.position = CGPoint(x: 3, y: -shadowWidth * 0.28)
-        shadow.zPosition = -1
-        node.addChild(shadow)
-        return node
     }
 
     private func drawStrike(style: GearStyle, from: CGPoint, to: CGPoint) {
@@ -443,72 +461,5 @@ final class RidgeScene: SKScene {
         let base = size.height * 0.34
         let scale = size.height / 560.0
         return base + CGFloat(worldY - simulation.climber.y) * scale
-    }
-
-    private func diamond(radius: CGFloat) -> CGPath {
-        let path = CGMutablePath()
-        path.move(to: CGPoint(x: 0, y: radius))
-        path.addLine(to: CGPoint(x: radius * 0.72, y: 0))
-        path.addLine(to: CGPoint(x: 0, y: -radius))
-        path.addLine(to: CGPoint(x: -radius * 0.72, y: 0))
-        path.closeSubpath()
-        return path
-    }
-
-    private func pebblePath() -> CGPath {
-        let path = CGMutablePath()
-        path.move(to: CGPoint(x: -4, y: -3))
-        path.addLine(to: CGPoint(x: -2, y: 4))
-        path.addLine(to: CGPoint(x: 4, y: 3))
-        path.addLine(to: CGPoint(x: 5, y: -2))
-        path.addLine(to: CGPoint(x: 1, y: -4))
-        path.closeSubpath()
-        return path
-    }
-
-    private func slabPath() -> CGPath {
-        let path = CGMutablePath()
-        path.move(to: CGPoint(x: -26, y: -12))
-        path.addLine(to: CGPoint(x: -22, y: 6))
-        path.addLine(to: CGPoint(x: -8, y: 14))
-        path.addLine(to: CGPoint(x: 10, y: 12))
-        path.addLine(to: CGPoint(x: 24, y: 4))
-        path.addLine(to: CGPoint(x: 20, y: -14))
-        path.closeSubpath()
-        return path
-    }
-
-    private func rockPath() -> CGPath {
-        let path = CGMutablePath()
-        path.move(to: CGPoint(x: -8, y: -6))
-        path.addLine(to: CGPoint(x: -4, y: 8))
-        path.addLine(to: CGPoint(x: 6, y: 7))
-        path.addLine(to: CGPoint(x: 10, y: -2))
-        path.addLine(to: CGPoint(x: 3, y: -9))
-        path.closeSubpath()
-        return path
-    }
-
-    private func chevron() -> CGPath {
-        let path = CGMutablePath()
-        path.move(to: CGPoint(x: -12, y: 4))
-        path.addLine(to: CGPoint(x: 0, y: 0))
-        path.addLine(to: CGPoint(x: -12, y: -4))
-        path.addLine(to: CGPoint(x: -8, y: 0))
-        path.closeSubpath()
-        return path
-    }
-
-    private func tyrantPath() -> CGPath {
-        let path = CGMutablePath()
-        path.move(to: CGPoint(x: -46, y: -10))
-        path.addLine(to: CGPoint(x: -28, y: 18))
-        path.addLine(to: CGPoint(x: -8, y: 6))
-        path.addLine(to: CGPoint(x: 6, y: 26))
-        path.addLine(to: CGPoint(x: 22, y: 4))
-        path.addLine(to: CGPoint(x: 42, y: 16))
-        path.addLine(to: CGPoint(x: 36, y: -14))
-        path.closeSubpath()
-        return path
     }
 }
